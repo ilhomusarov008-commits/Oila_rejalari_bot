@@ -1,4 +1,5 @@
 import os
+from aiohttp import web
 import sqlite3
 import ast
 from datetime import datetime
@@ -103,7 +104,7 @@ def calculate_sd_level(sd_score):
     else:
         return "yuqori"
 
-# EXCEL AVTOMATIK TAHLIL (YANGILANGAN: ENG MUHIM MEZONLAR VA TOP-5 STATISTIKASI BILAN)
+# EXCEL AVTOMATIK TAHLIL
 def export_xlsx():
     conn = db()
     rows = conn.execute("SELECT id,telegram_id,name,created_at,data FROM responses ORDER BY id").fetchall()
@@ -221,24 +222,18 @@ def export_xlsx():
         ws_stats.cell(row=r_idx, column=1, value=i+1)
         ws_stats.cell(row=r_idx, column=2, value=label)
         
-        # O'rtacha ball
         ws_stats.cell(row=r_idx, column=3, value=f"=IF($B$2>0, AVERAGE('Javoblar (Raw)'!{col_let}2:{col_let}{last_r}), 0)")
         ws_stats.cell(row=r_idx, column=3).number_format = '0.00'
         
-        # Bahosi
         ws_stats.cell(row=r_idx, column=4, value=f"=IF(C{r_idx}>2.2, \"Juda Muhim\", IF(C{r_idx}>1.5, \"Muhim\", \"Kamroq Muhim\"))")
         
-        # 3 - "Juda muhim" deb belgilaganlar soni
         ws_stats.cell(row=r_idx, column=5, value=f"=COUNTIF('Javoblar (Raw)'!{col_let}2:{col_let}{last_r}, 3)")
         
-        # 3 - "Juda muhim" deb belgilaganlar foizi
         ws_stats.cell(row=r_idx, column=6, value=f"=IF($B$2>0, E{r_idx}/$B$2, 0)")
         ws_stats.cell(row=r_idx, column=6).number_format = '0.0%'
         
-        # TOP-5 ga kiritganlar soni
         ws_stats.cell(row=r_idx, column=7, value=f"=COUNTIF('Javoblar (Raw)'!{top5_col_let}2:{top5_col_let}{last_r}, \"*\"&B{r_idx}&\"*\")")
         
-        # TOP-5 ga kiritganlar foizi
         ws_stats.cell(row=r_idx, column=8, value=f"=IF($B$2>0, G{r_idx}/$B$2, 0)")
         ws_stats.cell(row=r_idx, column=8).number_format = '0.0%'
         
@@ -409,6 +404,18 @@ async def main():
     if not TOKEN or TOKEN == "YANGI_BOT_TOKENINI_SHUYERGA_YAZING":
         raise RuntimeError("Iltimos, koddagi TOKEN o'zgaruvchisiga yangi bot tokenini joylang!")
     
+    # Baza jadvallarini yaratish
+    db()
+
+    # Render uchun aiohttp veb-serverini ishga tushirish
+    app = web.Application()
+    app.router.add_get('/', lambda r: web.Response(text="Bot ishlamoqda"))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+
     bot = Bot(TOKEN)
     dp = Dispatcher()
 
