@@ -29,7 +29,268 @@ GENERAL_QUESTIONS = [("age_group", "Yoshingiz qaysi oraliqda?", ["17–19", "20�
     ("course", "Kursingiz?", ["1-kurs", "2-kurs", "3-kurs", "4-kurs", "Magistratura / Boshqa"]),
     ("residence", "Doimiy yashash joyingiz?", ["Shahar", "Tuman/Qishloq"]),
     ("marital_status", "Hozirgi oilaviy holatingiz?", ["Turmush qurmagan", "Turmush qurgan"]),
-    ("desired_children", "Kelajakda nechta farzandli bo‘lishni xohlaysiz?", ["0", "1", "2", "3",qkoh qurishning " "maqbul yoshi nechada?\n\n"
+    ("desired_children", "Kelajakda nechta farzandli bo‘lishni xohlaysiz?", ["0", "1", "2", "3",
+    "4", "5 va undan ko‘p"]),
+    ]
+
+# 3. 25 TA ASOSIY TEST MEZONI
+CRITERIA = [("kind_understanding", "Mehribon, e’tiborli va tushunuvchan bo‘lishi"),
+    ("faithfulness", "Vafodor, sadoqatli va ishonchli bo‘lishi"),
+    ("honesty_responsibility", "Halol, va’dasida turadigan va mas’uliyatli bo‘lishi"),
+    ("emotional_stability",
+    "Hissiy jihatdan barqaror, vazmin va qiyin vaziyatlarda o‘zini boshqara olishi"),
+    ("pleasant_disposition", "Xushmuomala, samimiy va yoqimli fe’l-atvorga ega bo‘lishi"),
+    ("intelligence", "Aql-idrokli, mustaqil fikrlaydigan va muammolarga oqilona yondasha olishi"),
+    ("education_worldview", "Yaxshi ta’limga ega, bilimli va keng dunyoqarashli bo‘lishi"),
+    ("self_development",
+    "O‘z ustida ishlashi, bilim va ko‘nikmalarini rivojlantirishga intilishi"),
+    ("ambition_industriousness", "Maqsadli, tashabbuskor va mehnatsevar bo‘lishi"),
+    ("communication_conflict",
+    "Ochiq muloqot qilishi, fikrni tinglashi va kelishmovchiliklarni tinch yo‘l bilan hal qila olishi"),
+    ("health_lifestyle", "Sog‘lig‘iga e’tibor berishi va sog‘lom turmush tarziga amal qilishi"),
+    ("neatness", "Ozoda, saranjom va o‘ziga e’tiborli bo‘lishi"),
+    ("physical_attractiveness", "Tashqi ko‘rinishi va jismoniy jozibadorligi"),
+    ("age_compatibility", "Yoshi respondentning yoshiga mos bo‘lishi"),
+    ("family_values", "Oilaviy qadriyatlarni hurmat qilishi va oilani muhim deb bilishi"),
+    ("respect_elders_relatives",
+    "Ota-ona, katta yoshdagilar va qarindoshlarga hurmat bilan munosabatda bo‘lishi"),
+    ("marriage_orientation", "Nikoh va oilaviy hayotga jiddiy tayyorgarlik ko‘rgan bo‘lishi"),
+    ("family_responsibility",
+    "Oilaviy qarorlar va majburiyatlarda mas’uliyatli ishtirok etishga tayyorligi"),
+    ("parenting_responsibility",
+    "Farzand tarbiyasida faol ishtirok etishi va farzandlarga mas’uliyat bilan munosabatda bo‘lishi"),
+    ("household_participation",
+    "Uy-ro‘zg‘or ishlarida ishtirok etishga va oilaviy vazifalarni bo‘lishishga tayyorligi"),
+    ("financial_management",
+    "Oilaviy daromad va xarajatlarni rejalashtira olishi hamda mablag‘ni oqilona boshqarishi"),
+    ("income_stability",
+    "Barqaror daromadga ega bo‘lishi yoki oilaviy daromadga munosib hissa qo‘sha olishi"),
+    ("work_family_balance",
+    "Kasbiy faoliyatda rivojlanishga intilishi va oila bilan ish o‘rtasida muvozanatni saqlay olishi"),
+    ("social_reputation", "Jamiyatda o‘zini tutishi, obro‘si va atrofdagilar bilan munosabati"),
+    ("partner_support",
+    "Respondentning ta’limi, ishi, kasbiy rivojlanishi va shaxsiy maqsadlarini qo‘llab-quvvatlashi"),
+    ]
+
+# 4. LIKERT SHKALASI
+LIKERT_LABELS = [("0 — Umuman muhim emas", 0),
+    ("1 — Unchalik muhim emas", 1),
+    ("2 — Muhim", 2),
+    ("3 — Juda muhim", 3),
+    ]
+
+# 5. SD SAVOLLARI
+SD_QUESTIONS = [("sd1",
+    "Hech qachon birovga nisbatan ich-ichimdan g‘azab yoki nafrat sezmaganman.", True),
+    ("sd2", "Gohida bajara olmaydigan va’dalarni berib qo‘yaman.", False),
+    ("sd3", "Har doim o‘z xatolarimni ochiq tan olaman.", True),
+    ("sd4", "Ba’zan atrofimdagilar haqida g‘iybat qilishim yoki g‘iybatni eshitishim mumkin.",
+    False),
+    ("sd5", "Har qanday vaziyatda ham samimiy va xushfe’l bo‘lishga intilaman.", True),
+    ("sd6", "Ba’zan kayfiyatim yomon bo‘lsa, atrofdagilarga qo‘pollik qilib qo‘yaman.", False),
+    ]
+
+# 6. YAKUNIY OMILLAR
+MAIN_FACTORS = ["Shaxsiy xarakter va odob",
+    "Intellekt va ta’lim",
+    "Tashqi ko‘rinish",
+    "Oilaviy qadriyatlar va tarbiya",
+    "Ijtimoiy-iqtisodiy va ro‘zg‘or omillari",
+    "Boshqa"]
+
+# 6b. KONSTRUKTLAR (25 mezonning 5 guruhi — Excel tahlili uchun)
+CONSTRUCTS = [
+    (MAIN_FACTORS[0], "idx_xarakter", ["kind_understanding", "faithfulness",
+        "honesty_responsibility", "emotional_stability", "pleasant_disposition",
+        "communication_conflict"]),
+    (MAIN_FACTORS[1], "idx_intellekt", ["intelligence", "education_worldview",
+        "self_development", "ambition_industriousness"]),
+    (MAIN_FACTORS[2], "idx_korinish", ["health_lifestyle", "neatness",
+        "physical_attractiveness", "age_compatibility"]),
+    (MAIN_FACTORS[3], "idx_oilaviy", ["family_values", "respect_elders_relatives",
+        "marriage_orientation", "family_responsibility", "parenting_responsibility"]),
+    (MAIN_FACTORS[4], "idx_iqtisodiy", ["household_participation", "financial_management",
+        "income_stability", "work_family_balance", "social_reputation", "partner_support"]),
+]
+
+# 7. FSM
+
+class Survey(StatesGroup):
+    name = State()
+    gender = State()
+    general = State()
+    marriage_age = State()
+    likert = State()
+    top5 = State()
+    sd_scale = State()
+    main_factor = State()
+    custom_factor = State()
+
+# 8. DATABASE
+
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS responses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telegram_id INTEGER NOT NULL,
+            name TEXT,
+            gender TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            data TEXT NOT NULL
+        )
+        """)
+    conn.commit()
+    return conn
+
+def save_response(telegram_id, name, gender, data):
+    conn = get_conn()
+    conn.execute("""
+        INSERT INTO responses
+        (
+            telegram_id,
+            name,
+            gender,
+            created_at,
+            data
+        )
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (telegram_id, name, gender, datetime.now().isoformat(timespec="seconds"), repr(data)))
+    conn.commit()
+    conn.close()
+
+def has_completed_response(telegram_id):
+    conn = get_conn()
+    row = conn.execute("""
+        SELECT 1
+        FROM responses
+        WHERE telegram_id = ?
+        LIMIT 1
+        """,
+        (telegram_id,)).fetchone()
+    conn.close()
+    return row is not None
+
+def delete_user_response(telegram_id):
+    conn = get_conn()
+    conn.execute("DELETE FROM responses WHERE telegram_id = ?", (telegram_id,))
+    conn.commit()
+    conn.close()
+
+def delete_all_responses():
+    conn = get_conn()
+    conn.execute("DELETE FROM responses")
+    conn.commit()
+    conn.close()
+
+def load_rows():
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT
+            id,
+            telegram_id,
+            name,
+            gender,
+            created_at,
+            data
+        FROM responses
+        ORDER BY id
+        """).fetchall(
+        )
+    conn.close()
+    result = []
+    for (rid, telegram_id, name, gender, created_at, data_text) in rows:
+        try:
+            data = ast.literal_eval(data_text)
+            if not isinstance(data, dict):
+                data = {}
+        except Exception:
+            data = {}
+        result.append({"id": rid, "telegram_id": telegram_id, "name": name or "", "gender": gender or "",
+            "created_at": created_at or "", "data": data})
+    return result
+
+# 9. KLAVIATURALAR
+
+def option_buttons(items, prefix):
+    kb = InlineKeyboardBuilder()
+    for i, item in enumerate(items):
+        kb.button(text=str(item), callback_data=f"{prefix}:{i}")
+    kb.adjust(1)
+    return kb.as_markup()
+
+def gender_buttons():
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Erkak", callback_data="gender:Erkak")
+    kb.button(text="Ayol", callback_data="gender:Ayol")
+    kb.adjust(2)
+    return kb.as_markup()
+
+def likert_buttons():
+    kb = InlineKeyboardBuilder()
+    for label, value in LIKERT_LABELS:
+        kb.button(text=label, callback_data=f"likert:{value}")
+    kb.adjust(1)
+    return kb.as_markup()
+
+def sd_buttons():
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Ha", callback_data="sd:1")
+    kb.button(text="Yo‘q", callback_data="sd:0")
+    kb.adjust(2)
+    return kb.as_markup()
+
+def top5_keyboard(selected):
+    kb = InlineKeyboardBuilder()
+    for i, (_, label) in enumerate(CRITERIA):
+        if i in selected:
+            prefix = "☑️ "
+        else:
+            prefix = "⬜ "
+        kb.button(text=prefix + label, callback_data=f"top5:{i}")
+    kb.button(text=f"Tanlangan: {len(selected)}/5", callback_data="top5:count")
+    if len(selected) == 5:
+        kb.button(text="Tasdiqlash", callback_data="top5:confirm")
+    kb.adjust(1)
+    return kb.as_markup()
+
+def admin_keyboard():
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Statistika", callback_data="admin:stats")
+    kb.button(text="Excel — to‘liq tahlil", callback_data="admin:export")
+    kb.button(text="Mening testimni o‘chirish", callback_data="admin:reset")
+    kb.button(text="BARCHA MA’LUMOTNI O‘CHIRISH", callback_data="admin:reset_all")
+    kb.button(text="So‘rovnomani boshlash", callback_data="admin:start")
+    kb.adjust(1)
+    return kb.as_markup()
+
+# 10. YORDAMCHI FUNKSIYALAR
+
+def target_label(gender):
+    if gender == "Ayol":
+        return "erkak"
+    return "ayol"
+
+def calculate_sd_level(score):
+    if score <= 1:
+        return "Past"
+    if score <= 4:
+        return "O‘rtacha"
+    return "Yuqori"
+
+async def start_survey(message, state):
+    await state.clear()
+    await state.set_state(Survey.name)
+    await message.answer("Assalomu alaykum!\n\n" "Oila va nikoh mezonlari bo‘yicha "
+        "ilmiy tadqiqot so‘rovnomasiga xush kelibsiz.\n\n" "Ismingizni kiriting yoki "
+        "«O‘tkazib yuborish» tugmasini bosing.\n" "Ism-familiya berish majburiy emas.",
+        reply_markup=option_buttons(["O‘tkazib yuborish"], "skip_name"))
+
+async def send_general(message, state, index):
+    if index >= len(GENERAL_QUESTIONS):
+        await state.set_state(Survey.marriage_age)
+        await message.answer("Siz uchun nikoh qurishning " "maqbul yoshi nechada?\n\n"
             "Javobingizni faqat raqam bilan yozing.\n" "Masalan: 25")
         return
     key, question, options = GENERAL_QUESTIONS[index]
@@ -85,257 +346,508 @@ def style_sheet(ws):
         max_len = 0
         letter = get_column_letter(col[0].column)
         for cell in col:
-            value = ("" if cell.value is None else str(cell.value))
+            value = "" if cell.value is None else str(cell.value)
             max_len = max(max_len, len(value))
         ws.column_dimensions[letter].width = min(max(max_len + 2, 12), 45)
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = ws.dimensions
 
+
+# ---------- statistik yordamchilar (tashqi kutubxonasiz) ----------
+
+def mean(v):
+    return sum(v) / len(v) if v else None
+
+
+def stdev(v):
+    n = len(v)
+    if n < 2:
+        return None
+    m = sum(v) / n
+    return (sum((x - m) ** 2 for x in v) / (n - 1)) ** 0.5
+
+
+def median(v):
+    if not v:
+        return None
+    s = sorted(v)
+    mid = len(s) // 2
+    return s[mid] if len(s) % 2 else (s[mid - 1] + s[mid]) / 2
+
+
+def r2(x, n=4):
+    return "" if x is None else round(x, n)
+
+
+def pct(n, total):
+    return round(n / total * 100, 2) if total else ""
+
+
+def stars(p):
+    if p is None:
+        return ""
+    if p < 0.001:
+        return "***"
+    if p < 0.01:
+        return "**"
+    if p < 0.05:
+        return "*"
+    return ""
+
+
+def _betacf(a, b, x):
+    tiny = 1e-300
+    qab, qap, qam = a + b, a + 1, a - 1
+    c = 1.0
+    d = 1 - qab * x / qap
+    d = tiny if abs(d) < tiny else d
+    d = 1 / d
+    h = d
+    for m in range(1, 201):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+        d = 1 + aa * d
+        d = tiny if abs(d) < tiny else d
+        c = 1 + aa / c
+        c = tiny if abs(c) < tiny else c
+        d = 1 / d
+        h *= d * c
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+        d = 1 + aa * d
+        d = tiny if abs(d) < tiny else d
+        c = 1 + aa / c
+        c = tiny if abs(c) < tiny else c
+        d = 1 / d
+        de = d * c
+        h *= de
+        if abs(de - 1) < 3e-12:
+            break
+    return h
+
+
+def betainc(a, b, x):
+    if x <= 0:
+        return 0.0
+    if x >= 1:
+        return 1.0
+    bt = math.exp(math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+                  + a * math.log(x) + b * math.log(1 - x))
+    if x < (a + 1) / (a + b + 2):
+        return bt * _betacf(a, b, x) / a
+    return 1 - bt * _betacf(b, a, 1 - x) / b
+
+
+def t_pvalue(t, df):
+    return betainc(df / 2, 0.5, df / (df + t * t))
+
+
+def welch(a, b):
+    """Welch t-testi: (t, df, p, Cohen d) yoki None."""
+    na, nb = len(a), len(b)
+    if na < 2 or nb < 2:
+        return None
+    ma, mb = mean(a), mean(b)
+    va, vb = stdev(a) ** 2, stdev(b) ** 2
+    se2 = va / na + vb / nb
+    if se2 == 0:
+        return None
+    t = (ma - mb) / se2 ** 0.5
+    df = se2 ** 2 / ((va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1))
+    sp = (((na - 1) * va + (nb - 1) * vb) / (na + nb - 2)) ** 0.5
+    d = (ma - mb) / sp if sp else None
+    return t, df, t_pvalue(t, df), d
+
+
+def pearson(x, y):
+    n = len(x)
+    if n < 3:
+        return None
+    mx, my = mean(x), mean(y)
+    sxx = sum((a - mx) ** 2 for a in x)
+    syy = sum((b - my) ** 2 for b in y)
+    sxy = sum((a - mx) * (b - my) for a, b in zip(x, y))
+    if sxx == 0 or syy == 0:
+        return None
+    return sxy / (sxx * syy) ** 0.5
+
+
+def corr_p(r, n):
+    if r is None or n < 4:
+        return None
+    if abs(r) >= 1:
+        return 0.0
+    return t_pvalue(r * ((n - 2) / (1 - r * r)) ** 0.5, n - 2)
+
+
+def cronbach(matrix):
+    """Kronbax alfa. matrix: to‘liq javob bergan respondentlar qatorlari."""
+    n = len(matrix)
+    if n < 3 or len(matrix[0]) < 2:
+        return None
+    k = len(matrix[0])
+    item_var = sum(stdev(list(c)) ** 2 for c in zip(*matrix))
+    total_var = stdev([sum(r) for r in matrix]) ** 2
+    if total_var == 0:
+        return None
+    return k / (k - 1) * (1 - item_var / total_var)
+
+
+def build_people(rows):
+    people = []
+    for r in rows:
+        d = r["data"]
+        ans = d.get("likert_answers", {})
+        items = {k: ans[k] for k, _ in CRITERIA if isinstance(ans.get(k), int)}
+        complete = len(items) == len(CRITERIA)
+        cons = {}
+        for name, code, keys in CONSTRUCTS:
+            vals = [items[k] for k in keys if k in items]
+            cons[name] = mean(vals) if len(vals) == len(keys) else None
+        m = re.match(r"\d+", str(d.get("desired_children", "")))
+        age = d.get("ideal_marriage_age")
+        people.append({
+            "id": r["id"], "gender": r["gender"], "d": d, "items": items,
+            "complete": complete, "cons": cons,
+            "total": mean(list(items.values())) if complete else None,
+            "age": age if isinstance(age, int) else None,
+            "kids": int(m.group()) if m else None,
+        })
+    return people
+
+
 def export_excel(path):
     rows = load_rows()
+    people = build_people(rows)
+    total = len(rows)
+    male = [p for p in people if p["gender"] == "Erkak"]
+    female = [p for p in people if p["gender"] == "Ayol"]
     wb = Workbook()
-    default = wb.active
-    wb.remove(default)
+    wb.remove(wb.active)
 
-    # 01 — BARCHA MA'LUMOTLAR
-    ws = wb.create_sheet("01_Barcha_Malumotlar")
-    headers = ["id",
-        "telegram_id",
-        "name",
-        "gender",
-        "created_at",
-        "age_group",
-        "course",
-        "residence",
-        "marital_status",
-        "ideal_marriage_age",
-        "desired_children"]
-    for i in range(1, 26):
-        headers.append(f"q{i}")
-    for i in range(1, 26):
-        headers.append(f"q{i}_label")
-    for i in range(1, 6):
-        headers.append(f"top5_rank_{i}")
-    for i in range(1, 7):
-        headers.append(f"sd{i}")
-    headers += ["sd_score", "sd_level", "main_factor", "custom_factor"]
-    ws.append(headers)
-    for row in rows:
+    def new_sheet(name, header):
+        ws = wb.create_sheet(name)
+        ws.append(header)
+        return ws
+
+    # ---------- 01 — BARCHA MA’LUMOTLAR ----------
+    headers = ["id", "telegram_id", "name", "gender", "created_at", "age_group", "course",
+               "residence", "marital_status", "ideal_marriage_age", "desired_children"]
+    headers += [f"q{i}" for i in range(1, 26)]
+    headers += [f"q{i}_label" for i in range(1, 26)]
+    headers += [f"top5_rank_{i}" for i in range(1, 6)]
+    headers += [code for _, code, _ in CONSTRUCTS] + ["idx_umumiy", "main_factor", "custom_factor"]
+    ws = new_sheet("01_Barcha_Malumotlar", headers)
+    for row, p in zip(rows, people):
         d = row["data"]
-        values = [row["id"],
-            row["telegram_id"],
-            row["name"],
-            row["gender"],
-            row["created_at"],
-            d.get("age_group", ""),
-            d.get("course", ""),
-            d.get("residence", ""),
-            d.get("marital_status", ""),
-            d.get("ideal_marriage_age", ""),
-            d.get("desired_children", "")]
-        answers = d.get("likert_answers", {})
-        for key, label in CRITERIA:
-            values.append(answers.get(key, ""))
-        for key, label in CRITERIA:
-            values.append(label)
+        values = [row["id"], row["telegram_id"], row["name"], row["gender"], row["created_at"]]
+        values += [d.get(k, "") for k in ("age_group", "course", "residence", "marital_status",
+                                          "ideal_marriage_age", "desired_children")]
+        values += [d.get("likert_answers", {}).get(k, "") for k, _ in CRITERIA]
+        values += [label for _, label in CRITERIA]
         top5 = d.get("top5_ranks", [])
-        for i in range(5):
-            if i < len(top5):
-                values.append(top5[i])
-            else:
-                values.append("")
-        sd_answers = d.get("sd_answers", {})
-        for i in range(1, 7):
-            values.append(sd_answers.get(f"sd{i}", ""))
-        values += [d.get("sd_score", ""), d.get("sd_level", ""), d.get("main_factor", ""), d.get(
-            "custom_factor", "")]
+        values += [top5[i] if i < len(top5) else "" for i in range(5)]
+        values += [r2(p["cons"][name]) for name, _, _ in CONSTRUCTS] + [r2(p["total"])]
+        values += [d.get("main_factor", ""), d.get("custom_factor", "")]
         ws.append(values)
     style_sheet(ws)
 
-    # 02 — DEMOGRAFIYA
-    ws = wb.create_sheet("02_Demografiya")
-    ws.append(["id", "gender", "age_group", "course", "residence", "marital_status",
-        "ideal_marriage_age", "desired_children"])
+    # ---------- 02 — DEMOGRAFIYA (xom) ----------
+    ws = new_sheet("02_Demografiya", ["id", "gender", "age_group", "course", "residence",
+                                      "marital_status", "ideal_marriage_age", "desired_children"])
     for row in rows:
         d = row["data"]
-        ws.append([row["id"], row["gender"], d.get("age_group", ""), d.get("course", ""), d.get(
-            "residence", ""), d.get("marital_status", ""), d.get("ideal_marriage_age", ""), d.get(
-            "desired_children", "")])
+        ws.append([row["id"], row["gender"]] + [d.get(k, "") for k in (
+            "age_group", "course", "residence", "marital_status",
+            "ideal_marriage_age", "desired_children")])
     style_sheet(ws)
 
-    # 03 — LIKERT TAHLILI
-    ws = wb.create_sheet("03_Likert_Tahlil")
-    ws.append(["q", "construct", "mezon", "N", "O‘rtacha", "Standart og‘ish", "0 soni", "1 soni",
-        "2 soni", "3 soni", "3 ulushi (%)"])
-    for idx, (key, label) in enumerate(CRITERIA, start=1):
-        vals = []
-        for row in rows:
-            value = row["data"].get("likert_answers", {}).get(key)
-            if isinstance(value, int):
-                vals.append(value)
+    # ---------- 03 — DEMOGRAFIK TAQSIMOT ----------
+    ws = new_sheet("03_Demografik_Taqsimot", ["O‘zgaruvchi", "Variant", "N", "Ulush (%)",
+                   "Erkak N", "Erkak (%)", "Ayol N", "Ayol (%)"])
+    demo = [("gender", ["Erkak", "Ayol"])] + [(k, opts) for k, _, opts in GENERAL_QUESTIONS]
+    for key, options in demo:
+        for opt in options:
+            def val(p):
+                return p["gender"] if key == "gender" else p["d"].get(key, "")
+            n = sum(1 for p in people if val(p) == opt)
+            nm = sum(1 for p in male if val(p) == opt)
+            nf = sum(1 for p in female if val(p) == opt)
+            ws.append([key, opt, n, pct(n, total), nm, pct(nm, len(male)),
+                       nf, pct(nf, len(female))])
+    style_sheet(ws)
+
+    # ---------- 04 — LIKERT TAHLILI ----------
+    ws = new_sheet("04_Likert_Tahlil", ["q", "construct", "mezon", "N", "O‘rtacha", "Median",
+                   "Standart og‘ish", "0 soni", "1 soni", "2 soni", "3 soni",
+                   "2-3 ulushi (%)", "3 ulushi (%)", "Reyting (o‘rtacha bo‘yicha)"])
+    stats = []
+    for key, label in CRITERIA:
+        vals = [p["items"][key] for p in people if key in p["items"]]
+        stats.append((vals, mean(vals)))
+    means_only = [m for _, m in stats if m is not None]
+    for idx, ((key, label), (vals, m)) in enumerate(zip(CRITERIA, stats), start=1):
         n = len(vals)
-        if n:
-            mean = (sum(vals) / n)
-        else:
-            mean = ""
-        if n > 1:
-            variance = sum((x - mean) ** 2 for x in vals) / (n - 1)
-            std = variance ** 0.5
-        else:
-            std = ""
         counts = [vals.count(i) for i in range(4)]
-        if n:
-            share3 = (counts[3] / n * 100)
-        else:
-            share3 = ""
-        ws.append([f"q{idx}", key, label, n, round(mean, 4) if mean != "" else "", round(std, 4) if std != "" else "",
-            *counts, round(share3, 2) if share3 != "" else ""])
+        rank = 1 + sum(1 for x in means_only if m is not None and x > m) if m is not None else ""
+        ws.append([f"q{idx}", key, label, n, r2(m), r2(median(vals)), r2(stdev(vals)), *counts,
+                   pct(counts[2] + counts[3], n), pct(counts[3], n), rank])
     style_sheet(ws)
 
-    # 04 — TOP5
-    ws = wb.create_sheet("04_TOP5")
-    ws.append(["rank", "mezon", "konstrukt", "N", "Ulush (%)"])
-    total = len(rows)
+    # ---------- 05 — TOP-5 (o‘rinlar bo‘yicha) ----------
+    ws = new_sheet("05_TOP5", ["rank", "mezon", "konstrukt", "N", "Ulush (%)"])
+    label_to_key = {label: key for key, label in CRITERIA}
     for rank in range(1, 6):
         counts = {}
-        for row in rows:
-            ranks = row["data"].get("top5_ranks", [])
+        for p in people:
+            ranks = p["d"].get("top5_ranks", [])
             if len(ranks) >= rank:
-                label = ranks[rank - 1]
-                counts[label] = (counts.get(label, 0) + 1)
+                counts[ranks[rank - 1]] = counts.get(ranks[rank - 1], 0) + 1
         for label, count in sorted(counts.items(), key=lambda x: (-x[1], x[0])):
-            construct = next((k for k, l in CRITERIA if l == label), "")
-            ws.append([rank, label, construct, count, round(count / total * 100, 2) if total else ""])
+            ws.append([rank, label, label_to_key.get(label, ""), count, pct(count, total)])
     style_sheet(ws)
 
-    # 05 — SD
-    ws = wb.create_sheet("05_SD")
-    ws.append(["id", "gender", "sd1", "sd2", "sd3", "sd4", "sd5", "sd6", "sd_score", "sd_level"])
-    for row in rows:
-        d = row["data"]
-        s = d.get("sd_answers", {})
-        ws.append([row["id"], row["gender"], s.get("sd1", ""), s.get("sd2", ""), s.get("sd3", ""),
-            s.get("sd4", ""), s.get("sd5", ""), s.get("sd6", ""), d.get("sd_score", ""), d.get(
-            "sd_level", "")])
+    # ---------- 06 — TOP-5 UMUMIY (ballar) ----------
+    ws = new_sheet("06_TOP5_Umumiy", ["mezon", "konstrukt", "TOP-5 da uchrashi (N)", "Ulush (%)",
+                   "Ball (1-o‘rin=5 ... 5-o‘rin=1)", "Erkak N", "Erkak (%)", "Ayol N", "Ayol (%)"])
+    table = []
+    for key, label in CRITERIA:
+        n = score = nm = nf = 0
+        for p in people:
+            ranks = p["d"].get("top5_ranks", [])
+            if label in ranks:
+                n += 1
+                score += 5 - ranks.index(label)
+                if p["gender"] == "Erkak":
+                    nm += 1
+                elif p["gender"] == "Ayol":
+                    nf += 1
+        table.append([label, key, n, pct(n, total), score, nm, pct(nm, len(male)),
+                      nf, pct(nf, len(female))])
+    for line in sorted(table, key=lambda x: (-x[4], -x[2], x[0])):
+        ws.append(line)
     style_sheet(ws)
 
-    # 06 — GENDER TAHLILI
-    ws = wb.create_sheet("06_Gender_Tahlil")
-    ws.append(["q", "konstrukt", "mezon", "Erkak N", "Erkak o‘rtacha", "Ayol N", "Ayol o‘rtacha",
-        "Farq (Erkak-Ayol)"])
+    # ---------- 07 — GENDER TAHLILI (t-test) ----------
+    ws = new_sheet("07_Gender_Tahlil", ["q", "konstrukt", "mezon", "Erkak N", "Erkak o‘rtacha",
+                   "Erkak SD", "Ayol N", "Ayol o‘rtacha", "Ayol SD", "Farq (Erkak-Ayol)",
+                   "t", "df", "p-qiymat", "Cohen d", "Ma’nodorlik", "Bonferroni (p<0.002)"])
     for idx, (key, label) in enumerate(CRITERIA, start=1):
-        groups = {"Erkak": [], "Ayol": []}
-        for row in rows:
-            value = row["data"].get("likert_answers", {}).get(key)
-            gender = row["gender"]
-            if (isinstance(value, int) and gender in groups):
-                groups[gender].append(value)
-        means = {}
-        for gender, vals in groups.items():
-            if vals:
-                means[gender] = sum(vals) / len(vals)
-            else:
-                means[gender] = ""
-        if (means["Erkak"] != "" and means["Ayol"] != ""):
-            diff = round(means["Erkak"] - means["Ayol"], 4)
-        else:
-            diff = ""
-        ws.append([f"q{idx}", key, label, len(groups["Erkak"]), round(means["Erkak"], 4) if means[
-            "Erkak"] != "" else "", len(groups["Ayol"]), round(means["Ayol"], 4) if means["Ayol"] != "" else "",
-            diff])
+        a = [p["items"][key] for p in male if key in p["items"]]
+        b = [p["items"][key] for p in female if key in p["items"]]
+        res = welch(a, b)
+        t, df, pv, cd = res if res else (None, None, None, None)
+        diff = mean(a) - mean(b) if a and b else None
+        ws.append([f"q{idx}", key, label, len(a), r2(mean(a)), r2(stdev(a)), len(b),
+                   r2(mean(b)), r2(stdev(b)), r2(diff), r2(t), r2(df, 2), r2(pv, 5), r2(cd),
+                   stars(pv), "" if pv is None else ("Ha" if pv < 0.002 else "Yo‘q")])
     style_sheet(ws)
 
-    # 07 — FAKTORLAR
-    ws = wb.create_sheet("07_Faktorlar")
-    ws.append(["Faktor", "N", "Ulush (%)"])
-    factor_counts = {}
-    for row in rows:
-        factor = row["data"].get("main_factor", "")
-        if factor:
-            factor_counts[factor] = (factor_counts.get(factor, 0) + 1)
-    for factor, count in sorted(factor_counts.items(), key=lambda x: -x[1]):
-        ws.append([factor, count, round(count / total * 100, 2) if total else ""])
+    # ---------- 08 — KONSTRUKTLAR (indekslar, ishonchlilik) ----------
+    ws = new_sheet("08_Konstruktlar", ["Konstrukt", "Mezonlar soni", "N (to‘liq)", "O‘rtacha",
+                   "SD", "Kronbax alfa", "Erkak o‘rtacha", "Ayol o‘rtacha", "Farq (E-A)",
+                   "p-qiymat", "Cohen d", "Ma’nodorlik", "Yakuniy omil sifatida tanlagan (%)",
+                   "Reyting"])
+    cons_rows = []
+    factor_total = sum(1 for p in people if p["d"].get("main_factor"))
+    for name, code, keys in CONSTRUCTS:
+        vals = [p["cons"][name] for p in people if p["cons"][name] is not None]
+        a = [p["cons"][name] for p in male if p["cons"][name] is not None]
+        b = [p["cons"][name] for p in female if p["cons"][name] is not None]
+        res = welch(a, b)
+        t, df, pv, cd = res if res else (None, None, None, None)
+        matrix = [[p["items"][k] for k in keys] for p in people if p["complete"]]
+        chosen = sum(1 for p in people if p["d"].get("main_factor") == name)
+        cons_rows.append([name, len(keys), len(vals), mean(vals), stdev(vals),
+                          cronbach(matrix) if matrix else None, mean(a), mean(b),
+                          mean(a) - mean(b) if a and b else None, pv, cd, stars(pv),
+                          pct(chosen, factor_total)])
+    all_means = [r[3] for r in cons_rows if r[3] is not None]
+    for r in cons_rows:
+        rank = 1 + sum(1 for x in all_means if r[3] is not None and x > r[3]) if r[3] is not None else ""
+        ws.append([r[0], r[1], r[2], r2(r[3]), r2(r[4]), r2(r[5]), r2(r[6]), r2(r[7]), r2(r[8]),
+                   r2(r[9], 5), r2(r[10]), r[11], r[12], rank])
+    tot_vals = [p["total"] for p in people if p["total"] is not None]
+    ta = [p["total"] for p in male if p["total"] is not None]
+    tb = [p["total"] for p in female if p["total"] is not None]
+    res = welch(ta, tb)
+    t, df, pv, cd = res if res else (None, None, None, None)
+    full = [[p["items"][k] for k, _ in CRITERIA] for p in people if p["complete"]]
+    ws.append(["UMUMIY SHKALA (25 mezon)", 25, len(tot_vals), r2(mean(tot_vals)),
+               r2(stdev(tot_vals)), r2(cronbach(full) if full else None), r2(mean(ta)),
+               r2(mean(tb)), r2(mean(ta) - mean(tb) if ta and tb else None), r2(pv, 5),
+               r2(cd), stars(pv), "", ""])
     style_sheet(ws)
 
-    # 08 — SD TAHLILI
-    ws = wb.create_sheet("08_SD_Tahlil")
-    ws.append(["SD darajasi", "N", "Ulush (%)"])
-    levels = {}
-    for row in rows:
-        level = row["data"].get("sd_level", "")
-        if level:
-            levels[level] = (levels.get(level, 0) + 1)
-    for level in ["Past", "O‘rtacha", "Yuqori"]:
-        count = levels.get(level, 0)
-        ws.append([level, count, round(count / total * 100, 2) if total else ""])
+    # ---------- 09 — GURUHLAR TAQQOSI ----------
+    cnames = [n for n, _, _ in CONSTRUCTS]
+    ws = new_sheet("09_Guruhlar_Taqqosi", ["O‘zgaruvchi", "Guruh", "N"] + cnames + ["Umumiy indeks"])
+    group_vars = [("age_group", [o for k, _, o in GENERAL_QUESTIONS if k == "age_group"][0]),
+                  ("course", [o for k, _, o in GENERAL_QUESTIONS if k == "course"][0]),
+                  ("residence", ["Shahar", "Tuman/Qishloq"]),
+                  ("marital_status", ["Turmush qurmagan", "Turmush qurgan"])]
+    for key, options in group_vars:
+        groups = []
+        for opt in options:
+            members = [p for p in people if p["d"].get(key) == opt]
+            groups.append(members)
+            line = [key, opt, len(members)]
+            for name in cnames:
+                line.append(r2(mean([p["cons"][name] for p in members if p["cons"][name] is not None])))
+            line.append(r2(mean([p["total"] for p in members if p["total"] is not None])))
+            ws.append(line)
+        if len(groups) == 2:
+            line = [key, "p-qiymat (Welch)", ""]
+            for name in cnames + [None]:
+                x = [(p["total"] if name is None else p["cons"][name]) for p in groups[0]]
+                y = [(p["total"] if name is None else p["cons"][name]) for p in groups[1]]
+                res = welch([v for v in x if v is not None], [v for v in y if v is not None])
+                line.append(r2(res[2], 5) if res else "")
+            ws.append(line)
     style_sheet(ws)
 
-    # 09 — STATA
-    ws = wb.create_sheet("09_Stata_Kodlar")
-    stata_lines = ["* 25 ta Likert savoli: q1-q25",
-        "* 0=Umuman muhim emas",
-        "* 1=Unchalik muhim emas",
-        "* 2=Muhim",
-        "* 3=Juda muhim",
+    # ---------- 10 — KONSTRUKTLAR KORRELYATSIYASI ----------
+    variables = [(name, lambda p, n=name: p["cons"][n]) for name in cnames]
+    variables += [("Umumiy indeks", lambda p: p["total"]),
+                  ("Nikoh yoshi", lambda p: p["age"]),
+                  ("Istalgan farzandlar soni", lambda p: p["kids"])]
+    names = [v[0] for v in variables]
+    ws = new_sheet("10_Korrelyatsiya", ["Pearson r"] + names)
+    pm = []
+    for n1, f1 in variables:
+        line, pline = [n1], [n1]
+        for n2, f2 in variables:
+            pairs = [(f1(p), f2(p)) for p in people if f1(p) is not None and f2(p) is not None]
+            r = pearson([a for a, _ in pairs], [b for _, b in pairs]) if n1 != n2 else 1.0
+            line.append(r2(r))
+            pline.append(r2(corr_p(r, len(pairs)) if n1 != n2 else None, 5))
+        ws.append(line)
+        pm.append(pline)
+    ws.append([])
+    ws.append(["p-qiymatlar"] + names)
+    for pline in pm:
+        ws.append(pline)
+    style_sheet(ws)
+
+    # ---------- 11 — 25 MEZON KORRELYATSIYASI ----------
+    ws = new_sheet("11_Mezon_Korrelyatsiya", ["q / Pearson r"] + [f"q{i}" for i in range(1, 26)])
+    for i, (k1, _) in enumerate(CRITERIA, start=1):
+        line = [f"q{i} {k1}"]
+        for j, (k2, _) in enumerate(CRITERIA, start=1):
+            if i == j:
+                line.append(1.0)
+                continue
+            pairs = [(p["items"][k1], p["items"][k2]) for p in people
+                     if k1 in p["items"] and k2 in p["items"]]
+            line.append(r2(pearson([a for a, _ in pairs], [b for _, b in pairs])))
+        ws.append(line)
+    style_sheet(ws)
+
+    # ---------- 12 — NIKOH YOSHI VA FARZAND ----------
+    ws = new_sheet("12_Nikoh_Yoshi_Farzand", ["Ko‘rsatkich", "Guruh", "N", "O‘rtacha", "Median",
+                   "SD", "Min", "Max", "p-qiymat (E vs A)"])
+    for title, field in (("Nikohning maqbul yoshi", "age"), ("Istalgan farzandlar soni", "kids")):
+        groups = [("Jami", people), ("Erkak", male), ("Ayol", female)]
+        for gname, members in groups:
+            v = [p[field] for p in members if p[field] is not None]
+            ws.append([title, gname, len(v), r2(mean(v)), r2(median(v)), r2(stdev(v)),
+                       min(v) if v else "", max(v) if v else "", ""])
+        a = [p[field] for p in male if p[field] is not None]
+        b = [p[field] for p in female if p[field] is not None]
+        res = welch(a, b)
+        ws.append([title, "Farq (Erkak-Ayol)", "", r2(mean(a) - mean(b) if a and b else None),
+                   "", "", "", "", r2(res[2], 5) if res else ""])
+    style_sheet(ws)
+
+    # ---------- 13 — YAKUNIY OMILLAR ----------
+    ws = new_sheet("13_Faktorlar", ["Faktor", "N", "Ulush (%)", "Erkak N", "Erkak (%)",
+                                    "Ayol N", "Ayol (%)"])
+    fm = sum(1 for p in male if p["d"].get("main_factor"))
+    ff = sum(1 for p in female if p["d"].get("main_factor"))
+    for factor in MAIN_FACTORS:
+        n = sum(1 for p in people if p["d"].get("main_factor") == factor)
+        nm = sum(1 for p in male if p["d"].get("main_factor") == factor)
+        nf = sum(1 for p in female if p["d"].get("main_factor") == factor)
+        ws.append([factor, n, pct(n, factor_total), nm, pct(nm, fm), nf, pct(nf, ff)])
+    customs = [(p["id"], p["gender"], p["d"].get("custom_factor", "")) for p in people
+               if p["d"].get("custom_factor")]
+    if customs:
+        ws.append([])
+        ws.append(["«Boshqa» — erkin javoblar", "id", "Jins"])
+        for rid, gender, text in customs:
+            ws.append([text, rid, gender])
+    style_sheet(ws)
+
+    # ---------- 14 — STATA KODLARI ----------
+    ws = new_sheet("14_Stata_Kodlar", ["Stata kodi"])
+    for line in [
+        "* q1-q25: Likert 0-3 (0=Umuman muhim emas ... 3=Juda muhim)",
+        "* idx_xarakter, idx_intellekt, idx_korinish, idx_oilaviy, idx_iqtisodiy, idx_umumiy",
         "",
         "summarize q1-q25, detail",
         "alpha q1-q25",
+        "alpha q1 q2 q3 q4 q5 q10",
         "pwcorr q1-q25, sig",
         "tabulate gender",
         "tabstat q1-q25, by(gender) stat(n mean sd)",
-        "regress q1 q2 q3 q4 q5 q6 q7 q8 q9 q10",
-        "regress q1 q2 q3 q4 q5 q6 q7 q8 q9 q10 q11 q12 q13 q14 q15 q16 q17 q18 q19 q20 q21 q22 q23 q24 q25"]
-    for line in stata_lines:
+        "foreach v of varlist q1-q25 {",
+        "    ttest `v', by(gender)",
+        "}",
+        "tabstat idx_*, by(gender) stat(n mean sd)",
+        "foreach v of varlist idx_* {",
+        "    ttest `v', by(gender)",
+        "}",
+        "pwcorr idx_* ideal_marriage_age, sig",
+        "regress idx_umumiy ideal_marriage_age i.gender",
+        "tabulate main_factor gender, chi2 column",
+        "factor q1-q25, pcf",
+        "rotate, varimax",
+    ]:
         ws.append([line])
     style_sheet(ws)
 
-    # 10 — CODEBOOK
-    ws = wb.create_sheet("10_Codebook")
-    ws.append(["O‘zgaruvchi", "Mazmuni", "Tip"])
+    # ---------- 15 — CODEBOOK ----------
+    ws = new_sheet("15_Codebook", ["O‘zgaruvchi", "Mazmuni", "Tip"])
     fixed = [("id", "Respondent identifikatori", "numeric"),
-        ("telegram_id", "Telegram identifikatori", "numeric"),
-        ("gender", "Jins", "categorical"),
-        ("age_group", "Yosh guruhi", "categorical"),
-        ("course", "Kurs", "categorical"),
-        ("residence", "Doimiy yashash joyi", "categorical"),
-        ("marital_status", "Oilaviy holat", "categorical"),
-        ("ideal_marriage_age", "Nikohning maqbul yoshi", "numeric"),
-        ("desired_children", "Istalgan farzandlar soni", "categorical"),
-        ("sd_score", "Ijtimoiy maqbullik yig‘indi bali", "numeric"),
-        ("sd_level", "Ijtimoiy maqbullik darajasi", "categorical"),
-        ("main_factor", "Yakuniy asosiy omil", "categorical")]
+             ("telegram_id", "Telegram identifikatori", "numeric"),
+             ("gender", "Jins", "categorical"),
+             ("age_group", "Yosh guruhi", "categorical"),
+             ("course", "Kurs", "categorical"),
+             ("residence", "Doimiy yashash joyi", "categorical"),
+             ("marital_status", "Oilaviy holat", "categorical"),
+             ("ideal_marriage_age", "Nikohning maqbul yoshi", "numeric"),
+             ("desired_children", "Istalgan farzandlar soni", "categorical"),
+             ("main_factor", "Yakuniy asosiy omil", "categorical")]
     for item in fixed:
         ws.append(list(item))
     for i, (key, label) in enumerate(CRITERIA, start=1):
         ws.append([f"q{i}", label, "Likert 0–3"])
-    for i, (key, label, expected) in enumerate(SD_QUESTIONS, start=1):
-        ws.append([f"sd{i}", label, "binary"])
+    for name, code, keys in CONSTRUCTS:
+        ws.append([code, f"{name} indeksi (mezonlar o‘rtachasi, 0–3)", "numeric"])
+    ws.append(["idx_umumiy", "Umumiy indeks (25 mezon o‘rtachasi, 0–3)", "numeric"])
     for i in range(1, 6):
         ws.append([f"top5_rank_{i}", f"TOP-5 dagi {i}-o‘rin", "text"])
     style_sheet(ws)
 
-    # 11 — UMUMIY STATISTIKA
-    ws = wb.create_sheet("11_Umumiy_Statistika")
-    total = len(rows)
-    male = sum(1 for r in rows if r["gender"] == "Erkak")
-    female = sum(1 for r in rows if r["gender"] == "Ayol")
-    ws.append(["Ko‘rsatkich", "Qiymat"])
-    ws.append(["Jami respondentlar", total])
-    ws.append(["Erkak respondentlar", male])
-    ws.append(["Ayol respondentlar", female])
-    ws.append(["Test savollari soni", 25])
-    ws.append(["TOP-5 mezonlar soni", 5])
-    ws.append(["SD savollari soni", 6])
+    # ---------- 16 — UMUMIY STATISTIKA ----------
+    ws = new_sheet("16_Umumiy_Statistika", ["Ko‘rsatkich", "Qiymat"])
+    for line in [("Jami respondentlar", total), ("Erkak respondentlar", len(male)),
+                 ("Ayol respondentlar", len(female)),
+                 ("25 ta mezonga to‘liq javob berganlar", sum(1 for p in people if p["complete"])),
+                 ("Yakuniy omilni tanlaganlar", factor_total),
+                 ("Test savollari soni", 25), ("TOP-5 mezonlar soni", 5),
+                 ("Konstruktlar soni", len(CONSTRUCTS))]:
+        ws.append(list(line))
     style_sheet(ws)
 
-    # 12 — XOM MA'LUMOT
-    ws = wb.create_sheet("12_Xom_SQL_Malumot")
-    ws.append(["id", "telegram_id", "name", "gender", "created_at", "data"])
+    # ---------- 17 — XOM MA’LUMOT ----------
+    ws = new_sheet("17_Xom_SQL_Malumot", ["id", "telegram_id", "name", "gender", "created_at", "data"])
     for row in rows:
-        ws.append([row["id"], row["telegram_id"], row["name"], row["gender"], row["created_at"],
-            repr(row["data"])])
+        ws.append([row["id"], row["telegram_id"], row["name"], row["gender"],
+                   row["created_at"], repr(row["data"])])
     style_sheet(ws)
+
     wb.save(path)
+
 
 # 12. ADMIN STATISTIKA
 
@@ -344,8 +856,12 @@ def admin_stats_text():
     total = len(rows)
     male = sum(1 for r in rows if r["gender"] == "Erkak")
     female = sum(1 for r in rows if r["gender"] == "Ayol")
-    return ("ADMIN STATISTIKA\n\n" f"Jami respondent: {total}\n" f"Erkak: {male}\n"
-        f"Ayol: {female}\n" "Test savollari: 25\n" "TOP-5: 5 ta tanlov\n" "SD: 6 ta savol")
+    return ("ADMIN STATISTIKA\n\n"
+            f"Jami respondent: {total}\n"
+            f"Erkak: {male}\n"
+            f"Ayol: {female}\n"
+            "Test savollari: 25\n"
+            "TOP-5: 5 ta tanlov")
 
 # 13. MAIN
 
@@ -405,7 +921,7 @@ async def main():
         try:
             export_excel(EXPORT_PATH)
             await call.message.answer_document(document=FSInputFile(EXPORT_PATH), caption=(
-                "Excel tayyor.\n" "25 ta test, TOP-5, SD, " "gender tahlili, Stata "
+                "Excel tayyor.\n" "25 ta test, TOP-5, gender t-test, konstruktlar, korrelyatsiya, Stata "
                 "va Codebook kiritilgan."))
         except Exception as e:
             await call.message.answer("Excel eksportida xatolik:\n" f"{type(e).__name__}: {e}")
