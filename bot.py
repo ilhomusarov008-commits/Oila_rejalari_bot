@@ -1089,7 +1089,6 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
-  kb.adjust(1)
     return kb.as_markup()
 
 # 10. YORDAMCHI FUNKSIYALAR
