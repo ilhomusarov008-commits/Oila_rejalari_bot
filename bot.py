@@ -1,5 +1,5 @@
 import os
-import ast
+import json
 import sqlite3
 import asyncio
 from datetime import datetime
@@ -8,11 +8,10 @@ from aiohttp import web
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message, CallbackQuery, FSInputFile
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -20,7 +19,7 @@ from openpyxl.utils import get_column_letter
 
 
 # ============================================================
-# 1. BOT SOZLAMALARI
+# 1. SOZLAMALAR
 # ============================================================
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -37,7 +36,6 @@ EXPORT_PATH = os.getenv(
     "Oila_va_nikoh_statistik_tahlil.xlsx"
 )
 
-
 if not TOKEN:
     raise RuntimeError(
         "BOT_TOKEN environment variable o'rnatilmagan!"
@@ -45,11 +43,11 @@ if not TOKEN:
 
 
 # ============================================================
-# 2. UMUMIY DEMOGRAFIK SAVOLLAR
+# 2. DEMOGRAFIK SAVOLLAR
+#    BU SAVOLLAR 25 TA TESTGA KIRMAYDI
 # ============================================================
 
 GENERAL_QUESTIONS = [
-
     (
         "age_group",
         "Yoshingiz qaysi oraliqda?",
@@ -60,7 +58,6 @@ GENERAL_QUESTIONS = [
             "26 va undan katta"
         ]
     ),
-
     (
         "course",
         "Kursingiz?",
@@ -72,7 +69,6 @@ GENERAL_QUESTIONS = [
             "Magistratura / Boshqa"
         ]
     ),
-
     (
         "residence",
         "Doimiy yashash joyingiz?",
@@ -81,7 +77,6 @@ GENERAL_QUESTIONS = [
             "Tuman/Qishloq"
         ]
     ),
-
     (
         "marital_status",
         "Hozirgi oilaviy holatingiz?",
@@ -90,13 +85,6 @@ GENERAL_QUESTIONS = [
             "Turmush qurgan"
         ]
     ),
-
-    (
-        "ideal_marriage_age",
-        "Siz uchun nikoh qurishning maqbul yoshi nechada?",
-        None
-    ),
-
     (
         "desired_children",
         "Kelajakda nechta farzandli bo‘lishni xohlaysiz?",
@@ -113,186 +101,275 @@ GENERAL_QUESTIONS = [
 
 
 # ============================================================
-# 3. AYOLLAR UCHUN — IDEAL ERKAK MEZONLARI
-# ============================================================
-
-FEMALE_RESPONDENT_CRITERIA = [
-
-    (
-        "kind_understanding",
-        "Mehribon va tushunuvchan bo‘lishi"
-    ),
-
-    (
-        "reliable_determined",
-        "Ishonchli va qat’iyatli xarakterga ega bo‘lishi"
-    ),
-
-    (
-        "intelligent_educated",
-        "Aql-idrokli va ilmli bo‘lishi"
-    ),
-
-    (
-        "emotional_stable",
-        "Hissiy jihatdan barqaror va sabrli bo‘lishi"
-    ),
-
-    (
-        "pleasant_manner",
-        "Yoqimli fe’l-atvor va yaxshi muomalaga ega bo‘lishi"
-    ),
-
-    (
-        "honest_responsible",
-        "Halol, mas’uliyatli va sadoqatli bo‘lishi"
-    ),
-
-    (
-        "higher_education",
-        "Yuqori ma’lumotga / ta’limga ega bo‘lishi"
-    ),
-
-    (
-        "self_development_career",
-        "O‘z ustida ishlashi va martabaga intilishi"
-    ),
-
-    (
-        "hardworking",
-        "Mehnatsevar va harakatchan bo‘lishi"
-    ),
-
-    (
-        "financial_provider",
-        "Oila va ro‘zg‘orni munosib moliyaviy ta’minlay olishi"
-    ),
-
-    (
-        "social_status",
-        "Ijtimoiy mavqei yoki obro‘si yuqori bo‘lishi"
-    ),
-
-    (
-        "physical_attractiveness",
-        "Jismoniy jihatdan jozibador va kelbatli bo‘lishi"
-    ),
-
-    (
-        "healthy_lifestyle",
-        "Sog‘lom turmush tarziga rioya qilishi"
-    ),
-
-    (
-        "neatness",
-        "Ozoda va saranjom bo‘lishi"
-    ),
-
-    (
-        "family_leadership",
-        "Oilaviy mas’uliyatni va yetakchilikni o‘z zimmasiga olishi"
-    ),
-
-    (
-        "respect_family_values",
-        "Kattalarga va oilaviy qadriyatlarga hurmat ko‘rsatishi"
-    )
-]
-
-
-# ============================================================
-# 4. ERKAKLAR UCHUN — IDEAL AYOL MEZONLARI
+# 3. 25 TA TEST SAVOLLARI
+#
+# HAR BIRINING KEY'I ERKAK VA AYOL UCHUN BIR XIL.
+# BU STATA VA JINSLARARO TAQQOSLASH UCHUN QULAY.
 # ============================================================
 
 MALE_RESPONDENT_CRITERIA = [
 
     (
-        "gentle_understanding",
-        "Muloyim, shirinso‘z va tushunuvchan bo‘lishi"
+        "kind_understanding",
+        "Bo‘lajak ayolingizning mehribon, e’tiborli va tushunuvchan bo‘lishi siz uchun qanchalik muhim?"
     ),
 
     (
-        "faithful",
-        "Vafodor va sadoqatli bo‘lishi"
-    ),
-
-    (
-        "intelligent_educated",
-        "Aql-idrokli va ilmli/ma’rifatli bo‘lishi"
-    ),
-
-    (
-        "emotional_stable",
-        "Hissiy jihatdan barqaror va sabr-toqatli bo‘lishi"
-    ),
-
-    (
-        "pleasant_sincere",
-        "Yoqimli fe’l-atvor va samimiy bo‘lishi"
+        "faithful_reliable",
+        "Bo‘lajak ayolingizning vafodor, sadoqatli va munosabatlarda ishonchli bo‘lishi siz uchun qanchalik muhim?"
     ),
 
     (
         "honest_responsible",
-        "Halol va mas’uliyatli bo‘lishi"
+        "Bo‘lajak ayolingizning halol, mas’uliyatli va va’dasida turadigan bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "emotional_stability",
+        "Bo‘lajak ayolingizning hissiy jihatdan barqaror, vazmin va sabrli bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "pleasant_manner",
+        "Bo‘lajak ayolingizning samimiy, xushmuomala va yoqimli fe’l-atvorli bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "intelligence",
+        "Bo‘lajak ayolingizning aql-idrokli, mustaqil fikrlaydigan va oqilona qaror qabul qila olishi siz uchun qanchalik muhim?"
     ),
 
     (
         "education_worldview",
-        "Yaxshi ta’lim va dunyoqarashga ega bo‘lishi"
+        "Bo‘lajak ayolingizning yaxshi ta’limga ega, bilimli va keng dunyoqarashli bo‘lishi siz uchun qanchalik muhim?"
     ),
 
     (
-        "cooking_household",
-        "Pazandalik va ro‘zg‘or tutish ko‘nikmalariga ega bo‘lishi"
+        "self_development",
+        "Bo‘lajak ayolingizning o‘z ustida ishlashi, bilim va ko‘nikmalarini rivojlantirishga intilishi siz uchun qanchalik muhim?"
     ),
 
     (
-        "financial_management",
-        "Tejamkorlik va oilaviy resurslarni to‘g‘ri boshqara olishi"
+        "hardworking",
+        "Bo‘lajak ayolingizning maqsadli, tirishqoq va mehnatsevar bo‘lishi siz uchun qanchalik muhim?"
     ),
 
     (
-        "family_children_priority",
-        "Oila va farzandlar tarbiyasini birinchi o‘ringa qo‘yishi"
-    ),
-
-    (
-        "beauty_attractiveness",
-        "Tashqi jozibadorlik va go‘zallikka ega bo‘lishi"
+        "communication",
+        "Bo‘lajak ayolingizning siz bilan ochiq muloqot qilishi, fikringizni tinglashi va kelishmovchiliklarni tinch yo‘l bilan hal qila olishi siz uchun qanchalik muhim?"
     ),
 
     (
         "healthy_lifestyle",
-        "Sog‘lom turmush tarziga rioya qilishi"
+        "Bo‘lajak ayolingizning sog‘lig‘iga e’tibor berishi va sog‘lom turmush tarziga amal qilishi siz uchun qanchalik muhim?"
     ),
 
     (
         "neatness",
-        "Ozoda, sarishta va saranjom bo‘lishi"
+        "Bo‘lajak ayolingizning ozoda, sarishta va saranjom bo‘lishi siz uchun qanchalik muhim?"
     ),
 
     (
-        "respect_elders_traditions",
-        "Kattalarga va urf-odatlarga hurmat ko‘rsatishi"
+        "physical_attractiveness",
+        "Bo‘lajak ayolingizning tashqi ko‘rinishi va jismoniy jozibadorligi siz uchun qanchalik muhim?"
     ),
 
     (
-        "dress_social_etiquette",
-        "Kiyinish va jamiyatda muomala odobiga rioya qilishi"
+        "age_compatibility",
+        "Bo‘lajak ayolingizning yoshi sizning yoshingizga mos bo‘lishi siz uchun qanchalik muhim?"
     ),
 
     (
-        "husband_role_respect",
-        "Erkakning oiladagi o‘rnini va hurmatini joyiga qo‘yishi"
+        "family_values",
+        "Bo‘lajak ayolingizning oilaviy qadriyatlarni hurmat qilishi va oilani muhim deb bilishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "respect_elders",
+        "Bo‘lajak ayolingizning ota-ona, katta yoshdagilar va qarindoshlarga hurmat bilan munosabatda bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "marriage_orientation",
+        "Bo‘lajak ayolingizning nikoh va oilaviy hayotga jiddiy munosabatda bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "family_responsibility",
+        "Bo‘lajak ayolingizning oilaviy qarorlar va majburiyatlarda mas’uliyatli ishtirok etishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "children_responsibility",
+        "Bo‘lajak ayolingizning farzand tarbiyasida faol ishtirok etishi va farzandlarga mas’uliyat bilan munosabatda bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "household_management",
+        "Bo‘lajak ayolingizning uy-ro‘zg‘or ishlarini tashkil etish va oilaviy hayotni tartibli yurita olish ko‘nikmalariga ega bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "financial_management",
+        "Bo‘lajak ayolingizning oilaviy mablag‘larni tejashi va oilaviy budjetni oqilona boshqara olishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "financial_contribution",
+        "Bo‘lajak ayolingizning oilaviy daromadga hissa qo‘shish imkoniyati va istagi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "career_attitude",
+        "Bo‘lajak ayolingizning kasbiy rivojlanishga intilishi va oila bilan ish o‘rtasida muvozanatni saqlashi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "social_behavior",
+        "Bo‘lajak ayolingizning jamiyatda o‘zini tutishi, obro‘si va atrofdagilar bilan muomala madaniyati siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "partner_support",
+        "Bo‘lajak ayolingizning sizning ta’limingiz, ishingiz, kasbiy rivojlanishingiz va shaxsiy maqsadlaringizni qo‘llab-quvvatlashi siz uchun qanchalik muhim?"
+    )
+]
+
+
+FEMALE_RESPONDENT_CRITERIA = [
+
+    (
+        "kind_understanding",
+        "Bo‘lajak eringizning mehribon, e’tiborli va sizni tushuna oladigan bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "faithful_reliable",
+        "Bo‘lajak eringizning vafodor, sadoqatli va munosabatlarda ishonchli bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "honest_responsible",
+        "Bo‘lajak eringizning halol, va’dasida turadigan va mas’uliyatli bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "emotional_stability",
+        "Bo‘lajak eringizning hissiy jihatdan barqaror, vazmin va qiyin vaziyatlarda o‘zini boshqara oladigan bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "pleasant_manner",
+        "Bo‘lajak eringizning xushmuomala, samimiy va yoqimli fe’l-atvorli bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "intelligence",
+        "Bo‘lajak eringizning aql-idrokli, mustaqil fikrlaydigan va muammolarga oqilona yondasha oladigan bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "education_worldview",
+        "Bo‘lajak eringizning yaxshi ta’limga ega, bilimli va keng dunyoqarashli bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "self_development",
+        "Bo‘lajak eringizning o‘z ustida ishlashi, bilim va ko‘nikmalarini rivojlantirishga intilishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "hardworking",
+        "Bo‘lajak eringizning maqsadli, tashabbuskor va mehnatsevar bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "communication",
+        "Bo‘lajak eringizning siz bilan ochiq muloqot qilishi, fikringizni tinglashi va kelishmovchiliklarni tinch yo‘l bilan hal qila olishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "healthy_lifestyle",
+        "Bo‘lajak eringizning sog‘lig‘iga e’tibor berishi va sog‘lom turmush tarziga amal qilishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "neatness",
+        "Bo‘lajak eringizning ozoda, saranjom va o‘ziga e’tiborli bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "physical_attractiveness",
+        "Bo‘lajak eringizning tashqi ko‘rinishi va jismoniy jozibadorligi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "age_compatibility",
+        "Bo‘lajak eringizning yoshi sizning yoshingizga mos bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "family_values",
+        "Bo‘lajak eringizning oilaviy qadriyatlarni hurmat qilishi va oilani muhim deb bilishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "respect_elders",
+        "Bo‘lajak eringizning ota-ona, katta yoshdagilar va qarindoshlarga hurmat bilan munosabatda bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "marriage_orientation",
+        "Bo‘lajak eringizning nikoh va oilaviy hayotga jiddiy tayyorgarlik ko‘rgan bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "family_responsibility",
+        "Bo‘lajak eringizning oilaviy qarorlar va majburiyatlarda mas’uliyatli ishtirok etishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "children_responsibility",
+        "Bo‘lajak eringizning farzand tarbiyasida faol ishtirok etishi va farzandlarga mas’uliyat bilan munosabatda bo‘lishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "household_management",
+        "Bo‘lajak eringizning uy-ro‘zg‘or ishlarida ishtirok etishga va oilaviy vazifalarni jufti bilan bo‘lishishga tayyorligi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "financial_management",
+        "Bo‘lajak eringizning oilaviy daromad va xarajatlarni rejalashtira olishi, pulni oqilona boshqarishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "financial_contribution",
+        "Bo‘lajak eringizning barqaror daromad topish imkoniyati va oilaning moddiy farovonligini ta’minlash qobiliyati siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "career_attitude",
+        "Bo‘lajak eringizning kasbiy faoliyatida rivojlanishga intilishi, lekin oila va ish o‘rtasida muvozanatni saqlay olishi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "social_behavior",
+        "Bo‘lajak eringizning jamiyatdagi obro‘si, atrofdagilar bilan muomala madaniyati va ijtimoiy xulqi siz uchun qanchalik muhim?"
+    ),
+
+    (
+        "partner_support",
+        "Bo‘lajak eringizning sizning ta’lim olishingiz, ishlashingiz, kasbiy rivojlanishingiz va shaxsiy maqsadlaringizni qo‘llab-quvvatlashi siz uchun qanchalik muhim?"
     )
 ]
 
 
 # ============================================================
-# 5. LIKERT SHKALASI
+# 4. LIKERT
 # ============================================================
 
-LIKERT_LABELS = [
+LIKERT = [
     ("0 — Umuman muhim emas", 0),
     ("1 — Unchalik muhim emas", 1),
     ("2 — Muhim", 2),
@@ -301,86 +378,73 @@ LIKERT_LABELS = [
 
 
 # ============================================================
-# 6. TOP-5
-# ============================================================
-
-TOP5_LIMIT = 5
-
-
-# ============================================================
-# 7. SD SHKALASI
+# 5. SOCIAL DESIRABILITY
+#    BU SAVOLLAR 25 TA TESTGA KIRMAYDI
 # ============================================================
 
 SD_QUESTIONS = [
 
     (
-        "sd_1",
+        "sd1",
         "Hech qachon birovga nisbatan ich-ichimdan g‘azab yoki nafrat sezmaganman.",
         True
     ),
 
     (
-        "sd_2",
-        "Gohida bajara olmaydigan va'dalarni berib qo‘yaman.",
+        "sd2",
+        "Gohida bajara olmaydigan va’dalarni berib qo‘yaman.",
         False
     ),
 
     (
-        "sd_3",
+        "sd3",
         "Har doim o‘z xatolarimni ochiq tan olaman.",
         True
     ),
 
     (
-        "sd_4",
-        "Ba'zan atrofimdagilar haqida g‘iybat qilishim yoki g‘iybatni eshitishim mumkin.",
+        "sd4",
+        "Ba’zan atrofimdagilar haqida g‘iybat qilishim yoki g‘iybatni eshitishim mumkin.",
         False
     ),
 
     (
-        "sd_5",
-        "Har qanday vaziyatda ham samimiy va xushfe'l bo‘lishga intilaman.",
+        "sd5",
+        "Har qanday vaziyatda ham samimiy va xushfe’l bo‘lishga intilaman.",
         True
     ),
 
     (
-        "sd_6",
-        "Ba'zan kayfiyatim yomon bo‘lsa, atrofdagilarga qo‘pollik qilib qo‘yaman.",
+        "sd6",
+        "Ba’zan kayfiyatim yomon bo‘lsa, atrofdagilarga qo‘pollik qilib qo‘yaman.",
         False
     )
 ]
 
 
 # ============================================================
-# 8. YAKUNIY BOSH OMIL
+# 6. YAKUNIY OMILLAR
 # ============================================================
 
 MAIN_FACTORS = [
-
     "Shaxsiy xarakter va odob",
-
     "Intellekt va ta’lim",
-
     "Tashqi ko‘rinish",
-
     "Oilaviy qadriyatlar va tarbiya",
-
     "Ijtimoiy-iqtisodiy va ro‘zg‘or omillari",
-
     "Boshqa"
 ]
 
 
 # ============================================================
-# 9. DATABASE
+# 7. DATABASE
 # ============================================================
 
-def db():
+def get_db():
 
     conn = sqlite3.connect(DB_PATH)
 
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS responses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             telegram_id INTEGER,
@@ -389,25 +453,18 @@ def db():
             created_at TEXT,
             data TEXT
         )
-        """
-    )
+    """)
 
     conn.commit()
 
     return conn
 
 
-def save_response(
-    telegram_id,
-    name,
-    gender,
-    data
-):
+def save_response(user_id, name, gender, data):
 
-    conn = db()
+    conn = get_db()
 
-    conn.execute(
-        """
+    conn.execute("""
         INSERT INTO responses
         (
             telegram_id,
@@ -417,33 +474,28 @@ def save_response(
             data
         )
         VALUES (?, ?, ?, ?, ?)
-        """,
-        (
-            telegram_id,
-            name,
-            gender,
-            datetime.now().isoformat(timespec="seconds"),
-            repr(data)
-        )
-    )
+    """, (
+        user_id,
+        name,
+        gender,
+        datetime.now().isoformat(timespec="seconds"),
+        json.dumps(data, ensure_ascii=False)
+    ))
 
     conn.commit()
     conn.close()
 
 
-def has_completed_response(telegram_id):
+def already_completed(user_id):
 
-    conn = db()
+    conn = get_db()
 
-    row = conn.execute(
-        """
-        SELECT 1
+    row = conn.execute("""
+        SELECT id
         FROM responses
         WHERE telegram_id = ?
         LIMIT 1
-        """,
-        (telegram_id,)
-    ).fetchone()
+    """, (user_id,)).fetchone()
 
     conn.close()
 
@@ -451,25 +503,10 @@ def has_completed_response(telegram_id):
 
 
 # ============================================================
-# 10. SD HISOBLASH
+# 8. KLAVIATURALAR
 # ============================================================
 
-def calculate_sd_level(score):
-
-    if score <= 1:
-        return "Past"
-
-    if score <= 4:
-        return "O‘rtacha"
-
-    return "Yuqori"
-
-
-# ============================================================
-# 11. KLAVIATURALAR
-# ============================================================
-
-def option_buttons(items, prefix="ans"):
+def make_buttons(items, prefix):
 
     kb = InlineKeyboardBuilder()
 
@@ -485,7 +522,7 @@ def option_buttons(items, prefix="ans"):
     return kb.as_markup()
 
 
-def gender_buttons():
+def gender_keyboard():
 
     kb = InlineKeyboardBuilder()
 
@@ -504,14 +541,26 @@ def gender_buttons():
     return kb.as_markup()
 
 
-def likert_buttons():
+def skip_name_keyboard():
 
     kb = InlineKeyboardBuilder()
 
-    for label, value in LIKERT_LABELS:
+    kb.button(
+        text="⏭ Ismni ko‘rsatmasdan davom etish",
+        callback_data="name:skip"
+    )
+
+    return kb.as_markup()
+
+
+def likert_keyboard():
+
+    kb = InlineKeyboardBuilder()
+
+    for text, value in LIKERT:
 
         kb.button(
-            text=label,
+            text=text,
             callback_data=f"likert:{value}"
         )
 
@@ -520,7 +569,7 @@ def likert_buttons():
     return kb.as_markup()
 
 
-def sd_buttons():
+def sd_keyboard():
 
     kb = InlineKeyboardBuilder()
 
@@ -547,24 +596,29 @@ def top5_keyboard(selected, criteria):
 
         if i in selected:
             prefix = "☑️ "
-
         else:
             prefix = "⬜ "
 
+        short_label = label.replace(
+            "Bo‘lajak ayolingizning ", ""
+        ).replace(
+            "Bo‘lajak eringizning ", ""
+        )
+
         kb.button(
-            text=prefix + label,
+            text=prefix + short_label[:55],
             callback_data=f"top5:{i}"
         )
 
     kb.button(
-        text=f"Tanlangan: {len(selected)}/5",
+        text=f"📌 Tanlangan: {len(selected)}/5",
         callback_data="top5:count"
     )
 
     if len(selected) == 5:
 
         kb.button(
-            text="✅ Tasdiqlash",
+            text="✅ TOP-5 ni tasdiqlash",
             callback_data="top5:confirm"
         )
 
@@ -583,7 +637,7 @@ def admin_keyboard():
     )
 
     kb.button(
-        text="📥 Excel — to‘liq tahlil",
+        text="📥 Excel eksport",
         callback_data="admin:export"
     )
 
@@ -608,7 +662,7 @@ def admin_keyboard():
 
 
 # ============================================================
-# 12. FSM
+# 9. FSM STATES
 # ============================================================
 
 class Survey(StatesGroup):
@@ -619,27 +673,24 @@ class Survey(StatesGroup):
 
     general = State()
 
-    ideal_marriage_age = State()
+    marriage_age = State()
 
     likert = State()
 
     top5 = State()
 
-    sd_scale = State()
+    sd = State()
 
-    main_factor = State()
+    factor = State()
 
     custom_factor = State()
 
 
 # ============================================================
-# 13. SO‘ROVNOMANI BOSHLASH
+# 10. SO‘ROVNOMANI BOSHLASH
 # ============================================================
 
-async def start_survey(
-    message: Message,
-    state: FSMContext
-):
+async def start_survey(message, state):
 
     await state.clear()
 
@@ -648,64 +699,48 @@ async def start_survey(
     )
 
     await message.answer(
-        "Assalomu alaykum!\n\n"
-        "Oila va nikoh mezonlari bo‘yicha ilmiy tadqiqot "
-        "so‘rovnomasiga xush kelibsiz.\n\n"
-        "Iltimos, ismingizni kiriting:"
+        "📋 OILA VA NIKOH MEZONLARI BO‘YICHA SO‘ROVNOMA\n\n"
+        "Ushbu so‘rovnoma ilmiy tadqiqot maqsadida o‘tkaziladi.\n\n"
+        "Ismingizni kiritishingiz mumkin. "
+        "Ism ko‘rsatish majburiy emas.",
+        reply_markup=skip_name_keyboard()
     )
 
 
 # ============================================================
-# 14. UMUMIY SAVOLLARNI YUBORISH
+# 11. UMUMIY SAVOLNI YUBORISH
 # ============================================================
 
-async def send_general_question(
-    message: Message,
-    state: FSMContext
-):
-
-    data = await state.get_data()
-
-    index = data.get(
-        "general_index",
-        0
-    )
+async def send_general(message, state, index):
 
     if index >= len(GENERAL_QUESTIONS):
 
-        await send_likert_question(
-            message,
-            state,
-            0
+        await state.set_state(
+            Survey.marriage_age
+        )
+
+        await message.answer(
+            "📌 Nikoh qurishning maqbul yoshi\n\n"
+            "Siz uchun nikoh qurishning maqbul yoshi nechada?\n\n"
+            "Masalan: 25"
         )
 
         return
 
     key, question, options = GENERAL_QUESTIONS[index]
 
+    await state.update_data(
+        general_index=index
+    )
+
     await state.set_state(
         Survey.general
     )
 
-    if options is None:
-
-        await state.set_state(
-            Survey.ideal_marriage_age
-        )
-
-        await message.answer(
-            f"📌 {index + 3}/{len(GENERAL_QUESTIONS) + 2}\n\n"
-            f"{question}\n\n"
-            "Javobingizni faqat raqam bilan yozing.\n"
-            "Masalan: 25"
-        )
-
-        return
-
     await message.answer(
-        f"📌 Savol {index + 3}\n\n"
+        f"📌 DEMOGRAFIK SAVOL {index + 1}/{len(GENERAL_QUESTIONS)}\n\n"
         f"{question}",
-        reply_markup=option_buttons(
+        reply_markup=make_buttons(
             options,
             "general"
         )
@@ -713,51 +748,45 @@ async def send_general_question(
 
 
 # ============================================================
-# 15. LIKERT SAVOLLARI
+# 12. TEST SAVOLINI YUBORISH
 # ============================================================
 
-async def send_likert_question(
-    message: Message,
-    state: FSMContext,
-    index
-):
+async def send_test_question(message, state, index):
 
     data = await state.get_data()
 
-    gender = data.get(
-        "gender"
-    )
+    gender = data.get("gender")
 
     if gender == "Ayol":
 
         criteria = FEMALE_RESPONDENT_CRITERIA
-
-        target = "ideal erkak"
+        target = "ideal er"
 
     else:
 
         criteria = MALE_RESPONDENT_CRITERIA
-
         target = "ideal ayol"
 
-    if index >= len(criteria):
-
-        await state.set_state(
-            Survey.top5
-        )
+    if index >= 25:
 
         await state.update_data(
             top5_selected=[]
         )
 
+        await state.set_state(
+            Survey.top5
+        )
+
         await message.answer(
             "🏆 III-BO‘LIM — TOP-5\n\n"
-            f"Yuqoridagi {len(criteria)} ta mezon ichidan "
-            "siz uchun eng muhim 5 tasini tanlang.\n\n"
-            "Birinchi tanlov — 1-o‘rin\n"
-            "Ikkinchi tanlov — 2-o‘rin\n"
-            "va hokazo.\n\n"
-            "Tanlangan: 0/5",
+            "Yuqoridagi 25 ta test mezonidan "
+            "siz uchun ENG MUHIM 5 TASINI tanlang.\n\n"
+            "Tanlash tartibi ham saqlanadi:\n"
+            "1-tanlov → 1-o‘rin\n"
+            "2-tanlov → 2-o‘rin\n"
+            "3-tanlov → 3-o‘rin\n"
+            "4-tanlov → 4-o‘rin\n"
+            "5-tanlov → 5-o‘rin",
             reply_markup=top5_keyboard(
                 [],
                 criteria
@@ -765,6 +794,8 @@ async def send_likert_question(
         )
 
         return
+
+    key, question = criteria[index]
 
     await state.update_data(
         likert_index=index
@@ -774,38 +805,32 @@ async def send_likert_question(
         Survey.likert
     )
 
-    _, label = criteria[index]
-
     await message.answer(
-        f"📊 II-BO‘LIM — {index + 1}/{len(criteria)}\n\n"
-        f"Bo‘lajak {target}ning quyidagi xususiyati "
-        "siz uchun qanchalik muhim?\n\n"
-        f"👉 {label}",
-        reply_markup=likert_buttons()
+        f"📊 II-BO‘LIM — TEST {index + 1}/25\n\n"
+        f"Bo‘lajak {target}ning ushbu xususiyati "
+        f"siz uchun qanchalik muhim?\n\n"
+        f"👉 {question}",
+        reply_markup=likert_keyboard()
     )
 
 
 # ============================================================
-# 16. SD SAVOLLAR
+# 13. SD SAVOLINI YUBORISH
 # ============================================================
 
-async def send_sd_question(
-    message: Message,
-    state: FSMContext,
-    index
-):
+async def send_sd_question(message, state, index):
 
     if index >= len(SD_QUESTIONS):
 
         await state.set_state(
-            Survey.main_factor
+            Survey.factor
         )
 
         await message.answer(
             "🎯 V-BO‘LIM — YAKUNIY SAVOL\n\n"
-            "Umuman olganda, juft tanlashda siz uchun "
-            "qaysi umumiy yo‘nalish eng muhim?",
-            reply_markup=option_buttons(
+            "Umuman olganda, juft tanlashda "
+            "siz uchun qaysi yo‘nalish eng muhim?",
+            reply_markup=make_buttons(
                 MAIN_FACTORS,
                 "factor"
             )
@@ -813,34 +838,38 @@ async def send_sd_question(
 
         return
 
+    key, question, expected = SD_QUESTIONS[index]
+
     await state.update_data(
         sd_index=index
     )
 
     await state.set_state(
-        Survey.sd_scale
+        Survey.sd
     )
-
-    _, question, _ = SD_QUESTIONS[index]
 
     await message.answer(
         f"📝 IV-BO‘LIM — {index + 1}/{len(SD_QUESTIONS)}\n\n"
         f"“{question}”",
-        reply_markup=sd_buttons()
+        reply_markup=sd_keyboard()
     )
 
 
 # ============================================================
-# 17. BOTNI ISHGA TUSHIRISH
+# 14. BOT
 # ============================================================
 
 async def main():
 
-    db()
+    get_db()
 
-    # --------------------------------------------------------
-    # Render health check
-    # --------------------------------------------------------
+    bot = Bot(TOKEN)
+
+    dp = Dispatcher()
+
+    # ========================================================
+    # RENDER HEALTH SERVER
+    # ========================================================
 
     app = web.Application()
 
@@ -874,36 +903,24 @@ async def main():
 
     await site.start()
 
-    # --------------------------------------------------------
-    # Bot
-    # --------------------------------------------------------
-
-    bot = Bot(TOKEN)
-
-    dp = Dispatcher()
-
     # ========================================================
     # START
     # ========================================================
 
     @dp.message(CommandStart())
-    async def start(
-        message: Message,
-        state: FSMContext
-    ):
+    async def command_start(message: Message, state: FSMContext):
+
+        user_id = message.from_user.id
 
         if (
-            message.from_user.id != ADMIN_ID
-            and has_completed_response(
-                message.from_user.id
-            )
+            user_id != ADMIN_ID
+            and already_completed(user_id)
         ):
 
             await state.clear()
 
             await message.answer(
-                "Siz ushbu so‘rovnomada avval "
-                "qatnashgansiz.\n\n"
+                "Siz ushbu so‘rovnomada avval qatnashgansiz.\n\n"
                 "Ishtirokingiz uchun rahmat!"
             )
 
@@ -919,9 +936,7 @@ async def main():
     # ========================================================
 
     @dp.message(Command("admin"))
-    async def admin_panel(
-        message: Message
-    ):
+    async def admin_command(message: Message):
 
         if message.from_user.id != ADMIN_ID:
             return
@@ -936,6 +951,34 @@ async def main():
     # ISM
     # ========================================================
 
+    @dp.callback_query(
+        Survey.name,
+        F.data == "name:skip"
+    )
+    async def skip_name(
+        call: CallbackQuery,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            name="Ko‘rsatilmagan"
+        )
+
+        await state.set_state(
+            Survey.gender
+        )
+
+        await call.answer()
+
+        await call.message.edit_reply_markup(
+            reply_markup=None
+        )
+
+        await call.message.answer(
+            "👤 Jinsingizni tanlang:",
+            reply_markup=gender_keyboard()
+        )
+
     @dp.message(Survey.name)
     async def get_name(
         message: Message,
@@ -949,7 +992,9 @@ async def main():
         if not name:
 
             await message.answer(
-                "Iltimos, ismingizni kiriting."
+                "Ismni kiritishingiz yoki "
+                "“Ismni ko‘rsatmasdan davom etish” tugmasini bosishingiz mumkin.",
+                reply_markup=skip_name_keyboard()
             )
 
             return
@@ -964,7 +1009,7 @@ async def main():
 
         await message.answer(
             "👤 Jinsingizni tanlang:",
-            reply_markup=gender_buttons()
+            reply_markup=gender_keyboard()
         )
 
     # ========================================================
@@ -988,8 +1033,10 @@ async def main():
         await state.update_data(
             gender=gender,
             general_index=0,
-            answers={},
-            sd_score=0
+            general_answers={},
+            test_answers={},
+            top5_selected=[],
+            sd_answers={}
         )
 
         await call.answer()
@@ -998,48 +1045,44 @@ async def main():
             reply_markup=None
         )
 
-        await send_general_question(
+        await send_general(
             call.message,
-            state
+            state,
+            0
         )
 
     # ========================================================
-    # UMUMIY SAVOLLAR
+    # DEMOGRAFIKA
     # ========================================================
 
     @dp.callback_query(
         Survey.general,
         F.data.startswith("general:")
     )
-    async def answer_general(
+    async def get_general(
         call: CallbackQuery,
         state: FSMContext
     ):
 
-        data = await state.get_data()
-
-        index = data.get(
-            "general_index",
-            0
-        )
-
-        key, question, options = GENERAL_QUESTIONS[index]
-
-        choice = int(
+        index = int(
             call.data.split(":")[1]
         )
 
-        value = options[choice]
+        data = await state.get_data()
 
-        answers = data.get(
-            "answers",
+        questions = GENERAL_QUESTIONS
+
+        key = questions[index][0]
+
+        general_answers = data.get(
+            "general_answers",
             {}
         )
 
-        answers[key] = value
+        general_answers[key] = questions[index][2][index]
 
         await state.update_data(
-            answers=answers,
+            general_answers=general_answers,
             general_index=index + 1
         )
 
@@ -1049,110 +1092,97 @@ async def main():
             reply_markup=None
         )
 
-        await send_general_question(
+        await send_general(
             call.message,
-            state
+            state,
+            index + 1
         )
 
     # ========================================================
     # NIKOH YOSHI
     # ========================================================
 
-    @dp.message(Survey.ideal_marriage_age)
-    async def answer_marriage_age(
+    @dp.message(Survey.marriage_age)
+    async def get_marriage_age(
         message: Message,
         state: FSMContext
     ):
 
+        text = (
+            message.text or ""
+        ).strip()
+
         try:
 
-            age = int(
-                (message.text or "").strip()
-            )
+            age = int(text)
 
             if age < 15 or age > 60:
                 raise ValueError
 
-        except Exception:
+        except ValueError:
 
             await message.answer(
-                "Iltimos, 15–60 oralig‘ida "
-                "raqam kiriting.\n\n"
+                "Iltimos, 15 dan 60 gacha bo‘lgan "
+                "yoshni raqam bilan kiriting.\n"
                 "Masalan: 25"
             )
 
             return
 
-        data = await state.get_data()
-
-        answers = data.get(
-            "answers",
-            {}
-        )
-
-        answers[
-            "ideal_marriage_age"
-        ] = age
-
         await state.update_data(
-            answers=answers,
-            general_index=data.get(
-                "general_index",
-                0
-            ) + 1
+            ideal_marriage_age=age
         )
 
-        await send_general_question(
+        await send_test_question(
             message,
-            state
+            state,
+            0
         )
 
     # ========================================================
-    # LIKERT
+    # 25 TA LIKERT TEST
     # ========================================================
 
     @dp.callback_query(
         Survey.likert,
         F.data.startswith("likert:")
     )
-    async def answer_likert(
+    async def get_likert(
         call: CallbackQuery,
         state: FSMContext
     ):
-
-        data = await state.get_data()
-
-        index = data[
-            "likert_index"
-        ]
-
-        gender = data[
-            "gender"
-        ]
-
-        if gender == "Ayol":
-
-            criteria = FEMALE_RESPONDENT_CRITERIA
-
-        else:
-
-            criteria = MALE_RESPONDENT_CRITERIA
-
-        key, label = criteria[index]
 
         value = int(
             call.data.split(":")[1]
         )
 
-        answers = data.get(
-            "answers",
+        data = await state.get_data()
+
+        index = data.get(
+            "likert_index",
+            0
+        )
+
+        gender = data.get(
+            "gender"
+        )
+
+        if gender == "Ayol":
+            criteria = FEMALE_RESPONDENT_CRITERIA
+        else:
+            criteria = MALE_RESPONDENT_CRITERIA
+
+        key = criteria[index][0]
+
+        test_answers = data.get(
+            "test_answers",
             {}
         )
 
-        answers[key] = value
+        test_answers[key] = value
 
         await state.update_data(
-            answers=answers
+            test_answers=test_answers
         )
 
         await call.answer()
@@ -1161,21 +1191,21 @@ async def main():
             reply_markup=None
         )
 
-        await send_likert_question(
+        await send_test_question(
             call.message,
             state,
             index + 1
         )
 
     # ========================================================
-    # TOP 5
+    # TOP-5
     # ========================================================
 
     @dp.callback_query(
         Survey.top5,
         F.data.startswith("top5:")
     )
-    async def choose_top5(
+    async def top5_handler(
         call: CallbackQuery,
         state: FSMContext
     ):
@@ -1187,61 +1217,68 @@ async def main():
 
         data = await state.get_data()
 
-        gender = data["gender"]
+        gender = data.get(
+            "gender"
+        )
 
         if gender == "Ayol":
-
             criteria = FEMALE_RESPONDENT_CRITERIA
-
         else:
-
             criteria = MALE_RESPONDENT_CRITERIA
 
-        selected = list(
-            data.get(
-                "top5_selected",
-                []
-            )
+        selected = data.get(
+            "top5_selected",
+            []
         )
+
+        # ----------------------------------------------------
+        # COUNT
+        # ----------------------------------------------------
 
         if action == "count":
 
             await call.answer(
-                f"Tanlangan: {len(selected)}/5",
-                show_alert=True
+                f"Tanlangan: {len(selected)}/5"
             )
 
             return
+
+        # ----------------------------------------------------
+        # CONFIRM
+        # ----------------------------------------------------
 
         if action == "confirm":
 
             if len(selected) != 5:
 
                 await call.answer(
-                    "Avval 5 ta mezonni tanlang.",
+                    "Avval 5 ta mezon tanlang.",
                     show_alert=True
                 )
 
                 return
 
-            ordered = [
-                criteria[i][1]
-                for i in selected
-            ]
+            top5_data = []
 
-            top5_text = " | ".join(
-                f"{i + 1}-o‘rin: {value}"
-                for i, value
-                in enumerate(ordered)
-            )
+            for rank, index in enumerate(
+                selected,
+                start=1
+            ):
+
+                key, label = criteria[index]
+
+                top5_data.append({
+                    "rank": rank,
+                    "key": key,
+                    "label": label
+                })
 
             await state.update_data(
-                top5=top5_text
+                top5=top5_data,
+                sd_index=0
             )
 
-            await call.answer(
-                "TOP-5 saqlandi."
-            )
+            await call.answer()
 
             await call.message.edit_reply_markup(
                 reply_markup=None
@@ -1255,6 +1292,10 @@ async def main():
 
             return
 
+        # ----------------------------------------------------
+        # SELECT
+        # ----------------------------------------------------
+
         index = int(action)
 
         if index in selected:
@@ -1263,10 +1304,10 @@ async def main():
 
         else:
 
-            if len(selected) >= TOP5_LIMIT:
+            if len(selected) >= 5:
 
                 await call.answer(
-                    "Ko‘pi bilan 5 ta mezon tanlash mumkin.",
+                    "Faqat 5 ta mezon tanlash mumkin.",
                     show_alert=True
                 )
 
@@ -1292,39 +1333,36 @@ async def main():
     # ========================================================
 
     @dp.callback_query(
-        Survey.sd_scale,
+        Survey.sd,
         F.data.startswith("sd:")
     )
-    async def answer_sd(
+    async def get_sd(
         call: CallbackQuery,
         state: FSMContext
     ):
 
-        data = await state.get_data()
-
-        index = data[
-            "sd_index"
-        ]
-
-        answer = bool(
-            int(
-                call.data.split(":")[1]
-            )
+        answer = int(
+            call.data.split(":")[1]
         )
 
-        _, _, expected = SD_QUESTIONS[index]
+        data = await state.get_data()
 
-        score = data.get(
-            "sd_score",
+        index = data.get(
+            "sd_index",
             0
         )
 
-        if answer == expected:
+        key, question, expected = SD_QUESTIONS[index]
 
-            score += 1
+        sd_answers = data.get(
+            "sd_answers",
+            {}
+        )
+
+        sd_answers[key] = answer
 
         await state.update_data(
-            sd_score=score
+            sd_answers=sd_answers
         )
 
         await call.answer()
@@ -1340,83 +1378,23 @@ async def main():
         )
 
     # ========================================================
-    # BOSH OMIL
+    # YAKUNIY OMIL
     # ========================================================
 
     @dp.callback_query(
-        Survey.main_factor,
+        Survey.factor,
         F.data.startswith("factor:")
     )
-    async def finish(
+    async def get_factor(
         call: CallbackQuery,
         state: FSMContext
     ):
 
-        data = await state.get_data()
-
-        factor = MAIN_FACTORS[
-            int(
-                call.data.split(":")[1]
-            )
-        ]
-
-        if factor == "Boshqa":
-
-            await state.set_state(
-                Survey.custom_factor
-            )
-
-            await call.answer()
-
-            await call.message.edit_reply_markup(
-                reply_markup=None
-            )
-
-            await call.message.answer(
-                "Iltimos, siz uchun muhim "
-                "bo‘lgan boshqa yo‘nalishni yozing:"
-            )
-
-            return
-
-        answers = data.get(
-            "answers",
-            {}
+        index = int(
+            call.data.split(":")[1]
         )
 
-        answers[
-            "top5_ranking"
-        ] = data.get(
-            "top5",
-            ""
-        )
-
-        answers[
-            "sd_score"
-        ] = data.get(
-            "sd_score",
-            0
-        )
-
-        answers[
-            "sd_level"
-        ] = calculate_sd_level(
-            data.get(
-                "sd_score",
-                0
-            )
-        )
-
-        answers[
-            "main_factor"
-        ] = factor
-
-        save_response(
-            call.from_user.id,
-            data.get("name", ""),
-            data.get("gender", ""),
-            answers
-        )
+        factor = MAIN_FACTORS[index]
 
         await call.answer()
 
@@ -1424,22 +1402,31 @@ async def main():
             reply_markup=None
         )
 
-        await state.clear()
+        if factor == "Boshqa":
 
-        await call.message.answer(
-            "✅ Rahmat!\n\n"
-            "Javoblaringiz muvaffaqiyatli "
-            "qabul qilindi."
+            await state.set_state(
+                Survey.custom_factor
+            )
+
+            await call.message.answer(
+                "✍️ Siz uchun boshqa qaysi omil muhim?\n\n"
+                "Javobingizni yozing:"
+            )
+
+            return
+
+        await finish_survey(
+            call.message,
+            state,
+            factor
         )
 
     # ========================================================
-    # BOSHQA — ERKIN MATN
+    # BOSHQA OMIL
     # ========================================================
 
-    @dp.message(
-        Survey.custom_factor
-    )
-    async def finish_custom_factor(
+    @dp.message(Survey.custom_factor)
+    async def custom_factor(
         message: Message,
         state: FSMContext
     ):
@@ -1456,63 +1443,14 @@ async def main():
 
             return
 
-        data = await state.get_data()
-
-        answers = data.get(
-            "answers",
-            {}
-        )
-
-        answers[
-            "top5_ranking"
-        ] = data.get(
-            "top5",
-            ""
-        )
-
-        answers[
-            "sd_score"
-        ] = data.get(
-            "sd_score",
-            0
-        )
-
-        answers[
-            "sd_level"
-        ] = calculate_sd_level(
-            data.get(
-                "sd_score",
-                0
-            )
-        )
-
-        answers[
-            "main_factor"
-        ] = factor
-
-        save_response(
-            message.from_user.id,
-            data.get(
-                "name",
-                ""
-            ),
-            data.get(
-                "gender",
-                ""
-            ),
-            answers
-        )
-
-        await state.clear()
-
-        await message.answer(
-            "✅ Rahmat!\n\n"
-            "Javoblaringiz muvaffaqiyatli "
-            "qabul qilindi."
+        await finish_survey(
+            message,
+            state,
+            factor
         )
 
     # ========================================================
-    # ADMIN ACTIONS
+    # ADMIN CALLBACKS
     # ========================================================
 
     @dp.callback_query(
@@ -1524,6 +1462,12 @@ async def main():
     ):
 
         if call.from_user.id != ADMIN_ID:
+
+            await call.answer(
+                "Sizda ruxsat yo‘q.",
+                show_alert=True
+            )
+
             return
 
         action = call.data.split(
@@ -1531,55 +1475,35 @@ async def main():
             1
         )[1]
 
+        await call.answer()
+
         # ----------------------------------------------------
         # STATS
         # ----------------------------------------------------
 
         if action == "stats":
 
-            conn = db()
+            conn = get_db()
 
             total = conn.execute(
                 "SELECT COUNT(*) FROM responses"
             ).fetchone()[0]
 
             male = conn.execute(
-                """
-                SELECT COUNT(*)
-                FROM responses
-                WHERE gender = 'Erkak'
-                """
+                "SELECT COUNT(*) FROM responses WHERE gender='Erkak'"
             ).fetchone()[0]
 
             female = conn.execute(
-                """
-                SELECT COUNT(*)
-                FROM responses
-                WHERE gender = 'Ayol'
-                """
-            ).fetchone()[0]
-
-            today = datetime.now().date().isoformat()
-
-            today_count = conn.execute(
-                """
-                SELECT COUNT(*)
-                FROM responses
-                WHERE substr(created_at,1,10)=?
-                """,
-                (today,)
+                "SELECT COUNT(*) FROM responses WHERE gender='Ayol'"
             ).fetchone()[0]
 
             conn.close()
 
-            await call.answer()
-
             await call.message.answer(
-                "📊 TADQIQOT STATISTIKASI\n\n"
+                "📊 STATISTIKA\n\n"
                 f"Jami respondentlar: {total}\n"
-                f"👨 Erkaklar: {male}\n"
-                f"👩 Ayollar: {female}\n"
-                f"📅 Bugun: {today_count}"
+                f"Erkaklar: {male}\n"
+                f"Ayollar: {female}"
             )
 
         # ----------------------------------------------------
@@ -1588,49 +1512,46 @@ async def main():
 
         elif action == "export":
 
-            await call.answer(
-                "Excel tayyorlanmoqda..."
-            )
+            try:
 
-            path, total = export_xlsx()
+                path = create_excel()
 
-            await call.message.answer_document(
-                FSInputFile(path),
-                caption=(
-                    f"📊 To‘liq statistik baza tayyor.\n\n"
-                    f"Jami respondent: {total}\n\n"
-                    "Excel ichida erkaklar, ayollar, "
-                    "jinslararo taqqoslash, "
-                    "deskriptiv statistika, "
-                    "korrelyatsiya, regressiya "
-                    "va Stata uchun kodlangan ma’lumotlar mavjud."
+                from aiogram.types import FSInputFile
+
+                await call.message.answer_document(
+                    FSInputFile(path),
+                    caption=(
+                        "📊 To‘liq statistik Excel fayl.\n\n"
+                        "Unda Stata uchun kodlangan ma’lumotlar, "
+                        "Likert tahlili, TOP-5, SD va jinslararo "
+                        "taqqoslash mavjud."
+                    )
                 )
-            )
+
+            except Exception as e:
+
+                await call.message.answer(
+                    f"❌ Excel yaratishda xatolik:\n{e}"
+                )
 
         # ----------------------------------------------------
-        # RESET ADMIN
+        # RESET CURRENT ADMIN
         # ----------------------------------------------------
 
         elif action == "reset":
 
-            conn = db()
+            conn = get_db()
 
             conn.execute(
-                """
-                DELETE FROM responses
-                WHERE telegram_id = ?
-                """,
-                (call.from_user.id,)
+                "DELETE FROM responses WHERE telegram_id=?",
+                (ADMIN_ID,)
             )
 
             conn.commit()
             conn.close()
 
-            await state.clear()
-
-            await call.answer(
-                "Sizning javoblaringiz o‘chirildi.",
-                show_alert=True
+            await call.message.answer(
+                "✅ Sizning testingiz o‘chirildi."
             )
 
         # ----------------------------------------------------
@@ -1639,7 +1560,7 @@ async def main():
 
         elif action == "reset_all":
 
-            conn = db()
+            conn = get_db()
 
             conn.execute(
                 "DELETE FROM responses"
@@ -1648,15 +1569,8 @@ async def main():
             conn.commit()
             conn.close()
 
-            await state.clear()
-
-            await call.answer(
-                "Barcha ma’lumotlar o‘chirildi!",
-                show_alert=True
-            )
-
             await call.message.answer(
-                "💥 BAZA TO‘LIQ TOZALANDI."
+                "💥 Barcha respondent ma’lumotlari o‘chirildi."
             )
 
         # ----------------------------------------------------
@@ -1665,101 +1579,80 @@ async def main():
 
         elif action == "start":
 
-            await call.answer()
-
             await start_survey(
                 call.message,
                 state
             )
 
     # ========================================================
-    # /STATS
-    # ========================================================
-
-    @dp.message(
-        Command("stats")
-    )
-    async def stats_command(
-        message: Message
-    ):
-
-        if message.from_user.id != ADMIN_ID:
-            return
-
-        conn = db()
-
-        total = conn.execute(
-            "SELECT COUNT(*) FROM responses"
-        ).fetchone()[0]
-
-        male = conn.execute(
-            """
-            SELECT COUNT(*)
-            FROM responses
-            WHERE gender='Erkak'
-            """
-        ).fetchone()[0]
-
-        female = conn.execute(
-            """
-            SELECT COUNT(*)
-            FROM responses
-            WHERE gender='Ayol'
-            """
-        ).fetchone()[0]
-
-        conn.close()
-
-        await message.answer(
-            "📊 STATISTIKA\n\n"
-            f"Jami: {total}\n"
-            f"👨 Erkak: {male}\n"
-            f"👩 Ayol: {female}"
-        )
-
-    # ========================================================
-    # /EXPORT
-    # ========================================================
-
-    @dp.message(
-        Command("export")
-    )
-    async def export_command(
-        message: Message
-    ):
-
-        if message.from_user.id != ADMIN_ID:
-            return
-
-        path, total = export_xlsx()
-
-        await message.answer_document(
-            FSInputFile(path),
-            caption=(
-                f"📊 Excel tayyor.\n"
-                f"Jami respondent: {total}"
-            )
-        )
-
-    # ========================================================
     # POLLING
     # ========================================================
 
-    await dp.start_polling(
-        bot
+    try:
+
+        await dp.start_polling(
+            bot
+        )
+
+    finally:
+
+        await bot.session.close()
+
+        await runner.cleanup()
+
+
+# ============================================================
+# 15. SO‘ROVNOMANI YAKUNLASH
+# ============================================================
+
+async def finish_survey(
+    message,
+    state,
+    factor
+):
+
+    data = await state.get_data()
+
+    user_id = message.from_user.id
+
+    name = data.get(
+        "name",
+        "Ko‘rsatilmagan"
+    )
+
+    gender = data.get(
+        "gender",
+        ""
+    )
+
+    data["main_factor"] = factor
+
+    save_response(
+        user_id,
+        name,
+        gender,
+        data
+    )
+
+    await state.clear()
+
+    await message.answer(
+        "✅ SO‘ROVNOMA YAKUNLANDI!\n\n"
+        "Ishtirokingiz uchun katta rahmat.\n\n"
+        "Sizning javoblaringiz ilmiy tadqiqot "
+        "va statistik tahlil uchun saqlab qo‘yildi."
     )
 
 
 # ============================================================
-# 18. EXCEL EKSPORT
+# 16. EXCEL EKSPORT
 # ============================================================
 
-def export_xlsx():
+def create_excel():
 
-    conn = db()
+    conn = get_db()
 
-    rows = conn.execute(
-        """
+    rows = conn.execute("""
         SELECT
             id,
             telegram_id,
@@ -1769,41 +1662,23 @@ def export_xlsx():
             data
         FROM responses
         ORDER BY id
-        """
-    ).fetchall()
+    """).fetchall()
 
     conn.close()
 
     wb = Workbook()
 
-    # ========================================================
-    # STYLE
-    # ========================================================
+    # --------------------------------------------------------
+    # STYLES
+    # --------------------------------------------------------
 
-    blue_fill = PatternFill(
-        start_color="1F4E78",
-        end_color="1F4E78",
-        fill_type="solid"
+    header_fill = PatternFill(
+        "solid",
+        fgColor="1F4E78"
     )
 
-    green_fill = PatternFill(
-        start_color="2D6A4F",
-        end_color="2D6A4F",
-        fill_type="solid"
-    )
-
-    orange_fill = PatternFill(
-        start_color="C65911",
-        end_color="C65911",
-        fill_type="solid"
-    )
-
-    white_font = Font(
-        bold=True,
-        color="FFFFFF"
-    )
-
-    bold_font = Font(
+    header_font = Font(
+        color="FFFFFF",
         bold=True
     )
 
@@ -1819,1092 +1694,451 @@ def export_xlsx():
         bottom=thin
     )
 
-    # ========================================================
-    # MA’LUMOTLARNI TAYYORLASH
-    # ========================================================
-
-    all_records = []
-
-    for row in rows:
-
-        rid, telegram_id, name, gender, created_at, data_text = row
-
-        try:
-
-            data = ast.literal_eval(
-                data_text
-            )
-
-        except Exception:
-
-            data = {}
-
-        record = {
-            "id": rid,
-            "telegram_id": telegram_id,
-            "name": name,
-            "gender": gender,
-            "created_at": created_at
-        }
-
-        record.update(data)
-
-        all_records.append(
-            record
-        )
-
-    # ========================================================
-    # 01 — BARCHA MA’LUMOTLAR
-    # ========================================================
+    # --------------------------------------------------------
+    # 01 RAW
+    # --------------------------------------------------------
 
     ws = wb.active
 
     ws.title = "01_Barcha_Malumotlar"
 
-    headers = [
-
+    raw_headers = [
         "ID",
-        "Respondent_Kodi",
+        "Telegram_ID",
         "Ism",
         "Jins",
         "Sana",
-
-        "Yosh_Guruhi",
+        "Yosh guruhi",
         "Kurs",
-        "Yashash_Joyi",
-        "Oilaviy_Holati",
-        "Maqbul_Nikoh_Yoshi",
-        "Istalgan_Farzandlar"
-
+        "Yashash joyi",
+        "Oilaviy holat",
+        "Nikoh yoshi",
+        "Farzandlar soni"
     ]
 
-    # Ayollar / erkaklar mezonlarini birgalikda saqlaymiz
+    for i in range(25):
 
-    all_criteria_keys = []
-
-    for key, label in FEMALE_RESPONDENT_CRITERIA:
-
-        all_criteria_keys.append(
-            key
+        raw_headers.append(
+            f"TEST_{i+1}"
         )
 
-    for key, label in MALE_RESPONDENT_CRITERIA:
+    for i in range(5):
 
-        if key not in all_criteria_keys:
-
-            all_criteria_keys.append(
-                key
-            )
-
-    for key in all_criteria_keys:
-
-        headers.append(
-            key
+        raw_headers.append(
+            f"TOP5_{i+1}"
         )
 
-    headers += [
-
-        "TOP5",
+    raw_headers += [
         "SD_Score",
         "SD_Level",
         "Main_Factor"
-
     ]
 
-    ws.append(headers)
+    ws.append(raw_headers)
 
     for cell in ws[1]:
 
-        cell.font = white_font
-        cell.fill = blue_fill
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
         cell.alignment = Alignment(
-            wrap_text=True,
             horizontal="center",
             vertical="center"
         )
 
-    for record in all_records:
+    for row in rows:
 
-        row = [
+        data = json.loads(row[5])
 
-            record["id"],
+        general = data.get(
+            "general_answers",
+            {}
+        )
 
-            f"RESP-{record['id']:04d}",
+        tests = data.get(
+            "test_answers",
+            {}
+        )
 
-            record.get(
-                "name",
-                ""
+        top5 = data.get(
+            "top5",
+            []
+        )
+
+        sd_answers = data.get(
+            "sd_answers",
+            {}
+        )
+
+        sd_score = calculate_sd_score(
+            sd_answers
+        )
+
+        raw = [
+            row[0],
+            row[1],
+            row[2],
+            row[3],
+            row[4],
+            general.get("age_group", ""),
+            general.get("course", ""),
+            general.get("residence", ""),
+            general.get("marital_status", ""),
+            data.get("ideal_marriage_age", ""),
+            general.get("desired_children", "")
+        ]
+
+        criteria = (
+            FEMALE_RESPONDENT_CRITERIA
+            if row[3] == "Ayol"
+            else MALE_RESPONDENT_CRITERIA
+        )
+
+        for key, label in criteria:
+
+            raw.append(
+                tests.get(key, "")
+            )
+
+        for item in top5:
+
+            raw.append(
+                item.get("key", "")
+            )
+
+        while len(
+            raw
+        ) < 11 + 25 + 5:
+
+            raw.append("")
+
+        raw.append(
+            sd_score
+        )
+
+        raw.append(
+            sd_level(sd_score)
+        )
+
+        raw.append(
+            data.get("main_factor", "")
+        )
+
+        ws.append(raw)
+
+    # --------------------------------------------------------
+    # 02 STATA
+    # --------------------------------------------------------
+
+    ws2 = wb.create_sheet(
+        "02_Stata_Kodlangan"
+    )
+
+    stata_headers = [
+        "id",
+        "gender",
+        "age_group",
+        "course",
+        "residence",
+        "marital_status",
+        "ideal_marriage_age",
+        "desired_children"
+    ]
+
+    for i in range(25):
+
+        stata_headers.append(
+            f"q{i+1}"
+        )
+
+    stata_headers += [
+        "top1",
+        "top2",
+        "top3",
+        "top4",
+        "top5",
+        "sd_score",
+        "sd_level",
+        "main_factor"
+    ]
+
+    ws2.append(stata_headers)
+
+    for row in rows:
+
+        data = json.loads(row[5])
+
+        general = data.get(
+            "general_answers",
+            {}
+        )
+
+        tests = data.get(
+            "test_answers",
+            {}
+        )
+
+        criteria = (
+            FEMALE_RESPONDENT_CRITERIA
+            if row[3] == "Ayol"
+            else MALE_RESPONDENT_CRITERIA
+        )
+
+        values = [
+            row[0],
+            1 if row[3] == "Erkak" else 2,
+            encode_age(
+                general.get("age_group", "")
             ),
-
-            record.get(
-                "gender",
-                ""
+            encode_course(
+                general.get("course", "")
             ),
-
-            record.get(
-                "created_at",
-                ""
+            encode_residence(
+                general.get("residence", "")
             ),
-
-            record.get(
-                "age_group",
-                ""
+            encode_marital(
+                general.get("marital_status", "")
             ),
-
-            record.get(
-                "course",
-                ""
-            ),
-
-            record.get(
-                "residence",
-                ""
-            ),
-
-            record.get(
-                "marital_status",
-                ""
-            ),
-
-            record.get(
+            data.get(
                 "ideal_marriage_age",
                 ""
             ),
-
-            record.get(
-                "desired_children",
-                ""
-            )
-
-        ]
-
-        for key in all_criteria_keys:
-
-            row.append(
-                record.get(
-                    key,
+            encode_children(
+                general.get(
+                    "desired_children",
                     ""
                 )
             )
-
-        row += [
-
-            record.get(
-                "top5_ranking",
-                ""
-            ),
-
-            record.get(
-                "sd_score",
-                ""
-            ),
-
-            record.get(
-                "sd_level",
-                ""
-            ),
-
-            record.get(
-                "main_factor",
-                ""
-            )
-
-        ]
-
-        ws.append(row)
-
-    # ========================================================
-    # 02 — ERKAKLAR
-    # ========================================================
-
-    create_gender_sheet(
-        wb,
-        "02_Erkaklar",
-        [
-            r
-            for r in all_records
-            if r.get("gender") == "Erkak"
-        ],
-        MALE_RESPONDENT_CRITERIA,
-        blue_fill,
-        white_font
-    )
-
-    # ========================================================
-    # 03 — AYOLLAR
-    # ========================================================
-
-    create_gender_sheet(
-        wb,
-        "03_Ayollar",
-        [
-            r
-            for r in all_records
-            if r.get("gender") == "Ayol"
-        ],
-        FEMALE_RESPONDENT_CRITERIA,
-        green_fill,
-        white_font
-    )
-
-    # ========================================================
-    # 04 — JINS TAQQOSLASH
-    # ========================================================
-
-    create_gender_comparison(
-        wb,
-        all_records,
-        blue_fill,
-        green_fill,
-        white_font,
-        bold_font
-    )
-
-    # ========================================================
-    # 05 — DESKRIPTIV
-    # ========================================================
-
-    create_descriptive_sheet(
-        wb,
-        all_records,
-        blue_fill,
-        white_font,
-        bold_font
-    )
-
-    # ========================================================
-    # 06 — LIKERT
-    # ========================================================
-
-    create_likert_analysis(
-        wb,
-        all_records,
-        blue_fill,
-        white_font,
-        bold_font
-    )
-
-    # ========================================================
-    # 07 — TOP5
-    # ========================================================
-
-    create_top5_analysis(
-        wb,
-        all_records,
-        blue_fill,
-        white_font,
-        bold_font
-    )
-
-    # ========================================================
-    # 08 — SD
-    # ========================================================
-
-    create_sd_analysis(
-        wb,
-        all_records,
-        blue_fill,
-        white_font,
-        bold_font
-    )
-
-    # ========================================================
-    # 09 — KORRELYATSIYA
-    # ========================================================
-
-    create_correlation_sheet(
-        wb,
-        all_records,
-        blue_fill,
-        white_font,
-        bold_font
-    )
-
-    # ========================================================
-    # 10 — REGRESSIYA
-    # ========================================================
-
-    create_regression_sheet(
-        wb,
-        all_records,
-        blue_fill,
-        white_font,
-        bold_font
-    )
-
-    # ========================================================
-    # 11 — STATA DATA
-    # ========================================================
-
-    create_stata_data(
-        wb,
-        all_records,
-        blue_fill,
-        white_font
-    )
-
-    # ========================================================
-    # 12 — STATA CODEBOOK
-    # ========================================================
-
-    create_stata_codebook(
-        wb,
-        blue_fill,
-        white_font,
-        bold_font
-    )
-
-    # ========================================================
-    # UMUMIY FORMAT
-    # ========================================================
-
-    for ws in wb.worksheets:
-
-        ws.freeze_panes = "A2"
-
-        for row in ws.iter_rows():
-
-            for cell in row:
-
-                cell.border = border
-
-                cell.alignment = Alignment(
-                    vertical="center",
-                    wrap_text=True
-                )
-
-        for col_idx, column_cells in enumerate(
-            ws.columns,
-            1
-        ):
-
-            max_len = 10
-
-            for cell in list(
-                column_cells
-            )[:100]:
-
-                value = str(
-                    cell.value or ""
-                )
-
-                max_len = max(
-                    max_len,
-                    len(value)
-                )
-
-            ws.column_dimensions[
-                get_column_letter(col_idx)
-            ].width = min(
-                max_len + 2,
-                45
-            )
-
-    wb.save(
-        EXPORT_PATH
-    )
-
-    return (
-        EXPORT_PATH,
-        len(all_records)
-    )
-
-
-# ============================================================
-# 19. GENDER SHEET
-# ============================================================
-
-def create_gender_sheet(
-    wb,
-    title,
-    records,
-    criteria,
-    header_fill,
-    white_font
-):
-
-    ws = wb.create_sheet(
-        title
-    )
-
-    ws["A1"] = title.upper()
-
-    ws["A1"].font = Font(
-        bold=True,
-        size=14,
-        color="FFFFFF"
-    )
-
-    ws["A1"].fill = header_fill
-
-    ws["A3"] = "Respondentlar soni"
-
-    ws["B3"] = len(records)
-
-    headers = [
-        "ID",
-        "Kod",
-        "Ism",
-        "Jins",
-        "Yosh",
-        "Kurs",
-        "Yashash joyi",
-        "Oilaviy holat",
-        "Maqbul nikoh yoshi",
-        "Farzandlar"
-    ]
-
-    headers += [
-        label
-        for key, label in criteria
-    ]
-
-    headers += [
-        "TOP5",
-        "SD Score",
-        "SD Level",
-        "Main Factor"
-    ]
-
-    ws.append([])
-
-    ws.append(
-        headers
-    )
-
-    for cell in ws[5]:
-
-        cell.font = white_font
-        cell.fill = header_fill
-
-    for record in records:
-
-        row = [
-
-            record.get(
-                "id",
-                ""
-            ),
-
-            f"RESP-{record.get('id', 0):04d}",
-
-            record.get(
-                "name",
-                ""
-            ),
-
-            record.get(
-                "gender",
-                ""
-            ),
-
-            record.get(
-                "age_group",
-                ""
-            ),
-
-            record.get(
-                "course",
-                ""
-            ),
-
-            record.get(
-                "residence",
-                ""
-            ),
-
-            record.get(
-                "marital_status",
-                ""
-            ),
-
-            record.get(
-                "ideal_marriage_age",
-                ""
-            ),
-
-            record.get(
-                "desired_children",
-                ""
-            )
-
         ]
 
         for key, label in criteria:
 
-            row.append(
-                record.get(
-                    key,
-                    ""
-                )
+            values.append(
+                tests.get(key, "")
             )
 
-        row += [
-
-            record.get(
-                "top5_ranking",
-                ""
-            ),
-
-            record.get(
-                "sd_score",
-                ""
-            ),
-
-            record.get(
-                "sd_level",
-                ""
-            ),
-
-            record.get(
-                "main_factor",
-                ""
-            )
-
-        ]
-
-        ws.append(
-            row
+        top5 = data.get(
+            "top5",
+            []
         )
 
+        for i in range(5):
 
-# ============================================================
-# 20. JINS TAQQOSLASH
-# ============================================================
-
-def create_gender_comparison(
-    wb,
-    records,
-    blue_fill,
-    green_fill,
-    white_font,
-    bold_font
-):
-
-    ws = wb.create_sheet(
-        "04_Jins_Taqqoslash"
-    )
-
-    ws["A1"] = (
-        "ERKAK VA AYOL RESPONDENTLARINING "
-        "JUFT TANLASH MEZONLARI TAQQOSLANISHI"
-    )
-
-    ws["A1"].font = Font(
-        bold=True,
-        size=14
-    )
-
-    ws["A3"] = "Mezon"
-    ws["B3"] = "Erkaklar o‘rtachasi"
-    ws["C3"] = "Ayollar o‘rtachasi"
-    ws["D3"] = "Farq (Ayol-Erkak)"
-
-    for cell in ws[3]:
-
-        cell.font = white_font
-        cell.fill = blue_fill
-
-    max_len = max(
-        len(MALE_RESPONDENT_CRITERIA),
-        len(FEMALE_RESPONDENT_CRITERIA)
-    )
-
-    for i in range(max_len):
-
-        row = i + 4
-
-        male = (
-            MALE_RESPONDENT_CRITERIA[i]
-            if i < len(MALE_RESPONDENT_CRITERIA)
-            else None
-        )
-
-        female = (
-            FEMALE_RESPONDENT_CRITERIA[i]
-            if i < len(FEMALE_RESPONDENT_CRITERIA)
-            else None
-        )
-
-        label = ""
-
-        if male:
-            label = male[1]
-
-        if female:
-            if label:
-                label += " / " + female[1]
-            else:
-                label = female[1]
-
-        ws.cell(
-            row=row,
-            column=1,
-            value=label
-        )
-
-        male_key = male[0] if male else ""
-
-        female_key = (
-            female[0]
-            if female
-            else ""
-        )
-
-        male_values = [
-
-            r.get(
-                male_key
-            )
-            for r in records
-            if r.get("gender") == "Erkak"
-            and isinstance(
-                r.get(male_key),
-                (int, float)
-            )
-        ]
-
-        female_values = [
-
-            r.get(
-                female_key
-            )
-            for r in records
-            if r.get("gender") == "Ayol"
-            and isinstance(
-                r.get(female_key),
-                (int, float)
-            )
-        ]
-
-        male_range = f"B{row}"
-        female_range = f"C{row}"
-
-        if male_values:
-
-            ws.cell(
-                row=row,
-                column=2,
-                value=sum(male_values) / len(male_values)
-            )
-
-        else:
-
-            ws.cell(
-                row=row,
-                column=2,
-                value=0
-            )
-
-        if female_values:
-
-            ws.cell(
-                row=row,
-                column=3,
-                value=sum(female_values) / len(female_values)
-            )
-
-        else:
-
-            ws.cell(
-                row=row,
-                column=3,
-                value=0
-            )
-
-        ws.cell(
-            row=row,
-            column=4,
-            value=f"=C{row}-B{row}"
-        )
-
-        ws.cell(
-            row=row,
-            column=2
-        ).number_format = "0.00"
-
-        ws.cell(
-            row=row,
-            column=3
-        ).number_format = "0.00"
-
-        ws.cell(
-            row=row,
-            column=4
-        ).number_format = "0.00"
-
-
-# ============================================================
-# 21. DESKRIPTIV
-# ============================================================
-
-def create_descriptive_sheet(
-    wb,
-    records,
-    header_fill,
-    white_font,
-    bold_font
-):
-
-    ws = wb.create_sheet(
-        "05_Deskriptiv"
-    )
-
-    ws["A1"] = (
-        "DESKRIPTIV STATISTIKA"
-    )
-
-    ws["A1"].font = Font(
-        bold=True,
-        size=14
-    )
-
-    headers = [
-        "Ko‘rsatkich",
-        "N",
-        "Mean",
-        "Median",
-        "Minimum",
-        "Maximum",
-        "Std.Dev"
-    ]
-
-    for col, value in enumerate(
-        headers,
-        1
-    ):
-
-        cell = ws.cell(
-            3,
-            col,
-            value
-        )
-
-        cell.font = white_font
-        cell.fill = header_fill
-
-    variables = [
-
-        (
-            "Maqbul nikoh yoshi",
-            "ideal_marriage_age"
-        ),
-
-        (
-            "Istalgan farzandlar",
-            "desired_children"
-        ),
-
-        (
-            "SD Score",
-            "sd_score"
-        )
-
-    ]
-
-    row = 4
-
-    for label, key in variables:
-
-        values = []
-
-        for r in records:
-
-            value = r.get(
-                key
-            )
-
-            if isinstance(
-                value,
-                (int, float)
-            ):
+            if i < len(top5):
 
                 values.append(
-                    float(value)
+                    top5[i]["key"]
                 )
-
-        ws.cell(
-            row,
-            1,
-            label
-        )
-
-        ws.cell(
-            row,
-            2,
-            len(values)
-        )
-
-        if values:
-
-            mean = sum(values) / len(values)
-
-            sorted_values = sorted(
-                values
-            )
-
-            n = len(
-                sorted_values
-            )
-
-            if n % 2 == 0:
-
-                median = (
-                    sorted_values[n // 2 - 1]
-                    +
-                    sorted_values[n // 2]
-                ) / 2
 
             else:
 
-                median = sorted_values[
-                    n // 2
-                ]
+                values.append("")
 
-            minimum = min(
-                values
+        sd_score = calculate_sd_score(
+            data.get(
+                "sd_answers",
+                {}
             )
+        )
 
-            maximum = max(
-                values
+        values.append(
+            sd_score
+        )
+
+        values.append(
+            encode_sd_level(
+                sd_level(sd_score)
             )
+        )
 
-            if len(values) > 1:
-
-                variance = sum(
-                    (
-                        x - mean
-                    ) ** 2
-                    for x in values
-                ) / (
-                    len(values) - 1
+        values.append(
+            encode_factor(
+                data.get(
+                    "main_factor",
+                    ""
                 )
-
-                std = variance ** 0.5
-
-            else:
-
-                std = 0
-
-            ws.cell(
-                row,
-                3,
-                mean
             )
+        )
 
-            ws.cell(
-                row,
-                4,
-                median
-            )
+        ws2.append(values)
 
-            ws.cell(
-                row,
-                5,
-                minimum
-            )
+    # --------------------------------------------------------
+    # 03 DEMOGRAFIYA
+    # --------------------------------------------------------
 
-            ws.cell(
-                row,
-                6,
-                maximum
-            )
-
-            ws.cell(
-                row,
-                7,
-                std
-            )
-
-        row += 1
-
-
-# ============================================================
-# 22. LIKERT TAHLIL
-# ============================================================
-
-def create_likert_analysis(
-    wb,
-    records,
-    header_fill,
-    white_font,
-    bold_font
-):
-
-    ws = wb.create_sheet(
-        "06_Likert_Tahlil"
+    ws3 = wb.create_sheet(
+        "03_Demografiya"
     )
 
-    ws["A1"] = (
-        "JUFT TANLASH MEZONLARI — LIKERT TAHLILI"
-    )
+    ws3.append([
+        "O‘zgaruvchi",
+        "Qiymat",
+        "Soni",
+        "Foiz"
+    ])
 
-    ws["A1"].font = Font(
-        bold=True,
-        size=14
-    )
-
-    headers = [
-        "Jins",
-        "Mezon",
-        "N",
-        "Mean",
-        "Std.Dev",
-        "0 Soni",
-        "1 Soni",
-        "2 Soni",
-        "3 Soni",
-        "3 ulushi (%)"
+    demographics = [
+        ("gender", "Jins"),
+        ("age_group", "Yosh guruhi"),
+        ("course", "Kurs"),
+        ("residence", "Yashash joyi"),
+        ("marital_status", "Oilaviy holat"),
+        ("desired_children", "Farzandlar soni")
     ]
 
-    for col, value in enumerate(
-        headers,
-        1
-    ):
+    for key, title in demographics:
 
-        cell = ws.cell(
-            3,
-            col,
-            value
+        counter = {}
+
+        for row in rows:
+
+            data = json.loads(row[5])
+
+            if key == "gender":
+
+                value = row[3]
+
+            else:
+
+                value = data.get(
+                    "general_answers",
+                    {}
+                ).get(
+                    key,
+                    ""
+                )
+
+            counter[value] = (
+                counter.get(value, 0) + 1
+            )
+
+        total = sum(
+            counter.values()
         )
 
-        cell.font = white_font
-        cell.fill = header_fill
+        for value, count in counter.items():
 
-    row = 4
+            percent = (
+                count / total * 100
+                if total
+                else 0
+            )
 
-    for gender, criteria in [
-        (
-            "Erkak",
-            MALE_RESPONDENT_CRITERIA
-        ),
-        (
-            "Ayol",
-            FEMALE_RESPONDENT_CRITERIA
+            ws3.append([
+                title,
+                value,
+                count,
+                round(percent, 2)
+            ])
+
+    # --------------------------------------------------------
+    # 04 LIKERT TAHLIL
+    # --------------------------------------------------------
+
+    ws4 = wb.create_sheet(
+        "04_Likert_Tahlil"
+    )
+
+    ws4.append([
+        "Savol",
+        "Mezon",
+        "N",
+        "O‘rtacha",
+        "Standart og‘ish",
+        "0",
+        "1",
+        "2",
+        "3",
+        "3 baho ulushi (%)"
+    ])
+
+    for index in range(25):
+
+        key_m, label_m = MALE_RESPONDENT_CRITERIA[index]
+
+        key_f, label_f = FEMALE_RESPONDENT_CRITERIA[index]
+
+        male_values = []
+        female_values = []
+
+        for row in rows:
+
+            data = json.loads(row[5])
+
+            value = data.get(
+                "test_answers",
+                {}
+            ).get(
+                key_m,
+                None
+            )
+
+            if value is None:
+                continue
+
+            if row[3] == "Erkak":
+                male_values.append(value)
+            else:
+                female_values.append(value)
+
+        all_values = (
+            male_values +
+            female_values
         )
-    ]:
 
-        gender_records = [
-            r
-            for r in records
-            if r.get("gender") == gender
+        if all_values:
+
+            mean = sum(
+                all_values
+            ) / len(all_values)
+
+            variance = sum(
+                (x - mean) ** 2
+                for x in all_values
+            ) / len(all_values)
+
+            std = variance ** 0.5
+
+        else:
+
+            mean = 0
+            std = 0
+
+        counts = [
+            all_values.count(i)
+            for i in range(4)
         ]
 
-        for key, label in criteria:
+        share_3 = (
+            counts[3] /
+            len(all_values) *
+            100
+            if all_values
+            else 0
+        )
 
-            values = [
+        ws4.append([
+            index + 1,
+            label_f,
+            len(all_values),
+            round(mean, 3),
+            round(std, 3),
+            counts[0],
+            counts[1],
+            counts[2],
+            counts[3],
+            round(share_3, 2)
+        ])
 
-                r.get(key)
+    # --------------------------------------------------------
+    # 05 TOP5
+    # --------------------------------------------------------
 
-                for r in gender_records
-
-                if isinstance(
-                    r.get(key),
-                    (int, float)
-                )
-
-            ]
-
-            ws.cell(
-                row,
-                1,
-                gender
-            )
-
-            ws.cell(
-                row,
-                2,
-                label
-            )
-
-            ws.cell(
-                row,
-                3,
-                len(values)
-            )
-
-            if values:
-
-                mean = sum(values) / len(values)
-
-                if len(values) > 1:
-
-                    variance = sum(
-                        (
-                            x - mean
-                        ) ** 2
-                        for x in values
-                    ) / (
-                        len(values) - 1
-                    )
-
-                    std = variance ** 0.5
-
-                else:
-
-                    std = 0
-
-                ws.cell(
-                    row,
-                    4,
-                    mean
-                )
-
-                ws.cell(
-                    row,
-                    5,
-                    std
-                )
-
-                for score in range(4):
-
-                    ws.cell(
-                        row,
-                        6 + score,
-                        values.count(score)
-                    )
-
-                ws.cell(
-                    row,
-                    10,
-                    values.count(3) / len(values)
-                )
-
-                ws.cell(
-                    row,
-                    10
-                ).number_format = "0.0%"
-
-            row += 1
-
-
-# ============================================================
-# 23. TOP-5 TAHLIL
-# ============================================================
-
-def create_top5_analysis(
-    wb,
-    records,
-    header_fill,
-    white_font,
-    bold_font
-):
-
-    ws = wb.create_sheet(
-        "07_TOP5_Tahlil"
+    ws5 = wb.create_sheet(
+        "05_TOP5"
     )
 
-    ws["A1"] = (
-        "TOP-5 MEZONLAR TAHLILI"
-    )
-
-    ws["A1"].font = Font(
-        bold=True,
-        size=14
-    )
-
-    headers = [
-        "Jins",
+    ws5.append([
         "Mezon",
         "1-o‘rin",
         "2-o‘rin",
@@ -2912,687 +2146,444 @@ def create_top5_analysis(
         "4-o‘rin",
         "5-o‘rin",
         "Jami TOP-5"
+    ])
+
+    all_keys = [
+        key
+        for key, label in MALE_RESPONDENT_CRITERIA
     ]
 
-    for col, value in enumerate(
-        headers,
-        1
-    ):
-
-        cell = ws.cell(
-            3,
-            col,
-            value
-        )
-
-        cell.font = white_font
-        cell.fill = header_fill
-
-    row = 4
-
-    for gender, criteria in [
-        (
-            "Erkak",
-            MALE_RESPONDENT_CRITERIA
-        ),
-        (
-            "Ayol",
-            FEMALE_RESPONDENT_CRITERIA
-        )
-    ]:
-
-        gender_records = [
-            r
-            for r in records
-            if r.get("gender") == gender
-        ]
-
-        for key, label in criteria:
-
-            counts = [0, 0, 0, 0, 0]
-
-            for r in gender_records:
-
-                text = r.get(
-                    "top5_ranking",
-                    ""
-                )
-
-                if not text:
-                    continue
-
-                parts = text.split(
-                    " | "
-                )
-
-                for rank, part in enumerate(
-                    parts[:5]
-                ):
-
-                    if label in part:
-
-                        counts[rank] += 1
-
-            ws.cell(
-                row,
-                1,
-                gender
-            )
-
-            ws.cell(
-                row,
-                2,
-                label
-            )
-
-            for i, value in enumerate(
-                counts,
-                3
-            ):
-
-                ws.cell(
-                    row,
-                    i,
-                    value
-                )
-
-            ws.cell(
-                row,
-                8,
-                sum(counts)
-            )
-
-            row += 1
-
-
-# ============================================================
-# 24. SD TAHLILI
-# ============================================================
-
-def create_sd_analysis(
-    wb,
-    records,
-    header_fill,
-    white_font,
-    bold_font
-):
-
-    ws = wb.create_sheet(
-        "08_SD_Tahlil"
-    )
-
-    ws["A1"] = (
-        "IJTIMOIY MAQBULLIK — SD TAHLILI"
-    )
-
-    ws["A1"].font = Font(
-        bold=True,
-        size=14
-    )
-
-    headers = [
-        "Jins",
-        "SD Daraja",
-        "Soni",
-        "Ulushi (%)"
-    ]
-
-    for col, value in enumerate(
-        headers,
-        1
-    ):
-
-        cell = ws.cell(
-            3,
-            col,
-            value
-        )
-
-        cell.font = white_font
-        cell.fill = header_fill
-
-    row = 4
-
-    for gender in [
-        "Erkak",
-        "Ayol"
-    ]:
-
-        gender_records = [
-            r
-            for r in records
-            if r.get("gender") == gender
-        ]
-
-        total = len(
-            gender_records
-        )
-
-        for level in [
-            "Past",
-            "O‘rtacha",
-            "Yuqori"
-        ]:
-
-            count = sum(
-                1
-                for r in gender_records
-                if r.get("sd_level") == level
-            )
-
-            ws.cell(
-                row,
-                1,
-                gender
-            )
-
-            ws.cell(
-                row,
-                2,
-                level
-            )
-
-            ws.cell(
-                row,
-                3,
-                count
-            )
-
-            ws.cell(
-                row,
-                4,
-                count / total
-                if total
-                else 0
-            )
-
-            ws.cell(
-                row,
-                4
-            ).number_format = "0.0%"
-
-            row += 1
-
-
-# ============================================================
-# 25. KORRELYATSIYA
-# ============================================================
-
-def create_correlation_sheet(
-    wb,
-    records,
-    header_fill,
-    white_font,
-    bold_font
-):
-
-    ws = wb.create_sheet(
-        "09_Korrelyatsiya"
-    )
-
-    ws["A1"] = (
-        "KORRELYATSIYA TAHLILI"
-    )
-
-    ws["A1"].font = Font(
-        bold=True,
-        size=14
-    )
-
-    ws["A3"] = (
-        "Excel formulasi orqali Pearson korrelyatsiyasi"
-    )
-
-    ws["A5"] = "X"
-    ws["B5"] = "Y"
-    ws["C5"] = "Pearson r"
-
-    for cell in ws[5]:
-
-        cell.font = white_font
-        cell.fill = header_fill
-
-    # Demografik o‘zgaruvchi va SD
-
-    ws["A6"] = "Maqbul nikoh yoshi"
-    ws["B6"] = "SD Score"
-
-    # Formula uchun raw sheetdagi ustunlar
-    # J = ideal marriage age
-    # SD Score ustuni keyin aniqlanadi.
-
-    ws["C6"] = (
-        "=IFERROR(CORREL("
-        "'01_Barcha_Malumotlar'!J2:J10000,"
-        "'01_Barcha_Malumotlar'!AM2:AM10000"
-        "),0)"
-    )
-
-    ws["A7"] = "Maqbul nikoh yoshi"
-    ws["B7"] = "Istalgan farzandlar"
-
-    ws["C7"] = (
-        "=IFERROR(CORREL("
-        "'01_Barcha_Malumotlar'!J2:J10000,"
-        "'01_Barcha_Malumotlar'!K2:K10000"
-        "),0)"
-    )
-
-    ws["A8"] = "SD Score"
-    ws["B8"] = "Maqbul nikoh yoshi"
-
-    ws["C8"] = (
-        "=IFERROR(CORREL("
-        "'01_Barcha_Malumotlar'!AM2:AM10000,"
-        "'01_Barcha_Malumotlar'!J2:J10000"
-        "),0)"
-    )
-
-
-# ============================================================
-# 26. REGRESSIYA
-# ============================================================
-
-def create_regression_sheet(
-    wb,
-    records,
-    header_fill,
-    white_font,
-    bold_font
-):
-
-    ws = wb.create_sheet(
-        "10_Regressiya"
-    )
-
-    ws["A1"] = (
-        "EKONOMETRIK REGRESSIYA — OLS"
-    )
-
-    ws["A1"].font = Font(
-        bold=True,
-        size=14
-    )
-
-    ws["A3"] = (
-        "Model: Ideal nikoh yoshi = "
-        "β0 + β1(SD Score) + β2(Istalgan farzandlar) + ε"
-    )
-
-    ws["A5"] = "Ko‘rsatkich"
-    ws["B5"] = "Natija"
-
-    for cell in ws[5]:
-
-        cell.font = white_font
-        cell.fill = header_fill
-
-    ws["A6"] = "Kuzatuvlar soni"
-
-    ws["B6"] = (
-        "=COUNT('01_Barcha_Malumotlar'!J2:J10000)"
-    )
-
-    ws["A7"] = "R²"
-
-    # Excel LINEST ko‘p o‘lchovli regressiya
-    ws["B7"] = (
-        "=IFERROR("
-        "INDEX(LINEST("
-        "'01_Barcha_Malumotlar'!J2:J10000,"
-        "'01_Barcha_Malumotlar'!AM2:AM10000,"
-        "TRUE,TRUE),3,1),0)"
-    )
-
-    ws["A9"] = "Izoh"
-
-    ws["B9"] = (
-        "To‘liq ekonometrik baholashni "
-        "Stata/R/Python orqali qayta tekshirish tavsiya etiladi."
-    )
-
-    ws["A11"] = "Stata modeli"
-
-    ws["B11"] = (
-        "reg ideal_marriage_age sd_score desired_children"
-    )
-
-
-# ============================================================
-# 27. STATA UCHUN KODLANGAN MA’LUMOTLAR
-# ============================================================
-
-def create_stata_data(
-    wb,
-    records,
-    header_fill,
-    white_font
-):
-
-    ws = wb.create_sheet(
-        "11_Stata_Data"
-    )
-
-    headers = [
-
-        "id",
-        "gender",
-        "gender_code",
-        "age_group",
-        "age_code",
-        "course",
-        "course_code",
-        "residence",
-        "residence_code",
-        "marital_status",
-        "marital_code",
-        "ideal_marriage_age",
-        "desired_children",
-        "sd_score",
-        "sd_level",
-        "main_factor"
-
-    ]
-
-    # 16 universal-ish criterion columns
-
-    all_keys = []
-
-    for key, label in MALE_RESPONDENT_CRITERIA:
-
-        all_keys.append(key)
-
-    for key, label in FEMALE_RESPONDENT_CRITERIA:
-
-        if key not in all_keys:
-
-            all_keys.append(key)
-
-    for i, key in enumerate(
-        all_keys,
-        1
-    ):
-
-        headers.append(
-            f"q{i}"
-        )
-
-    headers += [
-        "top5"
-    ]
-
-    ws.append(
-        headers
-    )
-
-    for cell in ws[1]:
-
-        cell.font = white_font
-        cell.fill = header_fill
-
-    gender_map = {
-        "Erkak": 1,
-        "Ayol": 2
+    all_labels = {
+        key: label
+        for key, label in FEMALE_RESPONDENT_CRITERIA
     }
 
-    age_map = {
+    for key in all_keys:
+
+        counts = [0] * 5
+
+        for row in rows:
+
+            data = json.loads(row[5])
+
+            top5 = data.get(
+                "top5",
+                []
+            )
+
+            for item in top5:
+
+                if item.get("key") == key:
+
+                    rank = item.get(
+                        "rank",
+                        0
+                    )
+
+                    if 1 <= rank <= 5:
+
+                        counts[rank - 1] += 1
+
+        ws5.append([
+            all_labels.get(
+                key,
+                key
+            ),
+            counts[0],
+            counts[1],
+            counts[2],
+            counts[3],
+            counts[4],
+            sum(counts)
+        ])
+
+    # --------------------------------------------------------
+    # 06 SD
+    # --------------------------------------------------------
+
+    ws6 = wb.create_sheet(
+        "06_SD"
+    )
+
+    ws6.append([
+        "Respondent ID",
+        "Jins",
+        "SD Score",
+        "SD Level"
+    ])
+
+    for row in rows:
+
+        data = json.loads(row[5])
+
+        score = calculate_sd_score(
+            data.get(
+                "sd_answers",
+                {}
+            )
+        )
+
+        ws6.append([
+            row[0],
+            row[3],
+            score,
+            sd_level(score)
+        ])
+
+    # --------------------------------------------------------
+    # 07 JINSLARARO TAQQOSLASH
+    # --------------------------------------------------------
+
+    ws7 = wb.create_sheet(
+        "07_Jinslararo_Taqqoslash"
+    )
+
+    ws7.append([
+        "Savol",
+        "Erkaklar o‘rtachasi",
+        "Ayollar o‘rtachasi",
+        "Farq"
+    ])
+
+    for index in range(25):
+
+        key = MALE_RESPONDENT_CRITERIA[index][0]
+
+        male_values = []
+        female_values = []
+
+        for row in rows:
+
+            data = json.loads(row[5])
+
+            value = data.get(
+                "test_answers",
+                {}
+            ).get(
+                key,
+                None
+            )
+
+            if value is None:
+                continue
+
+            if row[3] == "Erkak":
+                male_values.append(value)
+            else:
+                female_values.append(value)
+
+        male_mean = (
+            sum(male_values) /
+            len(male_values)
+            if male_values
+            else 0
+        )
+
+        female_mean = (
+            sum(female_values) /
+            len(female_values)
+            if female_values
+            else 0
+        )
+
+        label = FEMALE_RESPONDENT_CRITERIA[index][1]
+
+        ws7.append([
+            label,
+            round(male_mean, 3),
+            round(female_mean, 3),
+            round(
+                male_mean - female_mean,
+                3
+            )
+        ])
+
+    # --------------------------------------------------------
+    # 08 CODEBOOK
+    # --------------------------------------------------------
+
+    ws8 = wb.create_sheet(
+        "08_Codebook"
+    )
+
+    ws8.append([
+        "O‘zgaruvchi",
+        "Izoh",
+        "Kodlash"
+    ])
+
+    codebook = [
+
+        ("gender", "Jins", "1=Erkak; 2=Ayol"),
+
+        ("age_group", "Yosh guruhi",
+         "1=17–19; 2=20–22; 3=23–25; 4=26+"),
+
+        ("course", "Kurs",
+         "1=1-kurs; 2=2-kurs; 3=3-kurs; 4=4-kurs; 5=Magistratura/Boshqa"),
+
+        ("residence", "Yashash joyi",
+         "1=Shahar; 2=Tuman/Qishloq"),
+
+        ("marital_status", "Oilaviy holat",
+         "1=Turmush qurmagan; 2=Turmush qurgan"),
+
+        ("Likert", "Test savollari",
+         "0=Umuman muhim emas; 1=Unchalik muhim emas; 2=Muhim; 3=Juda muhim"),
+
+        ("SD", "Social desirability",
+         "0–6 ball; Past/O‘rtacha/Yuqori")
+    ]
+
+    for item in codebook:
+
+        ws8.append(item)
+
+    # --------------------------------------------------------
+    # 09 XULOSA
+    # --------------------------------------------------------
+
+    ws9 = wb.create_sheet(
+        "09_Xulosa"
+    )
+
+    total = len(rows)
+
+    male = sum(
+        1
+        for r in rows
+        if r[3] == "Erkak"
+    )
+
+    female = sum(
+        1
+        for r in rows
+        if r[3] == "Ayol"
+    )
+
+    ws9.append([
+        "Ko‘rsatkich",
+        "Qiymat"
+    ])
+
+    ws9.append([
+        "Jami respondentlar",
+        total
+    ])
+
+    ws9.append([
+        "Erkak respondentlar",
+        male
+    ])
+
+    ws9.append([
+        "Ayol respondentlar",
+        female
+    ])
+
+    ws9.append([
+        "Asosiy test savollari",
+        25
+    ])
+
+    ws9.append([
+        "TOP-5 mezonlari",
+        5
+    ])
+
+    ws9.append([
+        "SD savollari",
+        6
+    ])
+
+    # --------------------------------------------------------
+    # FORMAT
+    # --------------------------------------------------------
+
+    for sheet in wb.worksheets:
+
+        for row in sheet.iter_rows():
+
+            for cell in row:
+
+                cell.border = border
+
+                cell.alignment = Alignment(
+                    vertical="top",
+                    wrap_text=True
+                )
+
+        for cell in sheet[1]:
+
+            cell.fill = header_fill
+            cell.font = header_font
+
+        for column in sheet.columns:
+
+            max_length = 0
+
+            column_letter = get_column_letter(
+                column[0].column
+            )
+
+            for cell in column:
+
+                try:
+
+                    length = len(
+                        str(cell.value)
+                    )
+
+                    if length > max_length:
+                        max_length = length
+
+                except:
+                    pass
+
+            sheet.column_dimensions[
+                column_letter
+            ].width = min(
+                max(max_length + 2, 12),
+                45
+            )
+
+    wb.save(
+        EXPORT_PATH
+    )
+
+    return EXPORT_PATH
+
+
+# ============================================================
+# 17. YORDAMCHI FUNKSIYALAR
+# ============================================================
+
+def calculate_sd_score(sd_answers):
+
+    score = 0
+
+    for key, question, expected in SD_QUESTIONS:
+
+        answer = sd_answers.get(
+            key
+        )
+
+        if answer is None:
+            continue
+
+        if bool(answer) == expected:
+
+            score += 1
+
+    return score
+
+
+def sd_level(score):
+
+    if score <= 1:
+        return "Past"
+
+    if score <= 4:
+        return "O‘rtacha"
+
+    return "Yuqori"
+
+
+def encode_sd_level(level):
+
+    return {
+        "Past": 1,
+        "O‘rtacha": 2,
+        "Yuqori": 3
+    }.get(
+        level,
+        0
+    )
+
+
+def encode_age(value):
+
+    return {
         "17–19": 1,
         "20–22": 2,
         "23–25": 3,
         "26 va undan katta": 4
-    }
+    }.get(
+        value,
+        0
+    )
 
-    course_map = {
+
+def encode_course(value):
+
+    return {
         "1-kurs": 1,
         "2-kurs": 2,
         "3-kurs": 3,
         "4-kurs": 4,
         "Magistratura / Boshqa": 5
-    }
-
-    residence_map = {
-        "Shahar": 1,
-        "Tuman/Qishloq": 2
-    }
-
-    marital_map = {
-        "Turmush qurmagan": 0,
-        "Turmush qurgan": 1
-    }
-
-    for r in records:
-
-        row = [
-
-            r.get(
-                "id",
-                ""
-            ),
-
-            r.get(
-                "gender",
-                ""
-            ),
-
-            gender_map.get(
-                r.get("gender"),
-                ""
-            ),
-
-            r.get(
-                "age_group",
-                ""
-            ),
-
-            age_map.get(
-                r.get("age_group"),
-                ""
-            ),
-
-            r.get(
-                "course",
-                ""
-            ),
-
-            course_map.get(
-                r.get("course"),
-                ""
-            ),
-
-            r.get(
-                "residence",
-                ""
-            ),
-
-            residence_map.get(
-                r.get("residence"),
-                ""
-            ),
-
-            r.get(
-                "marital_status",
-                ""
-            ),
-
-            marital_map.get(
-                r.get("marital_status"),
-                ""
-            ),
-
-            r.get(
-                "ideal_marriage_age",
-                ""
-            ),
-
-            r.get(
-                "desired_children",
-                ""
-            ),
-
-            r.get(
-                "sd_score",
-                ""
-            ),
-
-            r.get(
-                "sd_level",
-                ""
-            ),
-
-            r.get(
-                "main_factor",
-                ""
-            )
-
-        ]
-
-        for key in all_keys:
-
-            row.append(
-                r.get(
-                    key,
-                    ""
-                )
-            )
-
-        row.append(
-            r.get(
-                "top5_ranking",
-                ""
-            )
-        )
-
-        ws.append(
-            row
-        )
-
-
-# ============================================================
-# 28. STATA CODEBOOK
-# ============================================================
-
-def create_stata_codebook(
-    wb,
-    header_fill,
-    white_font,
-    bold_font
-):
-
-    ws = wb.create_sheet(
-        "12_Stata_Codebook"
+    }.get(
+        value,
+        0
     )
 
-    headers = [
-        "Variable",
-        "Mazmuni",
-        "Kodlash"
-    ]
 
-    for col, value in enumerate(
-        headers,
-        1
-    ):
+def encode_residence(value):
 
-        cell = ws.cell(
-            1,
-            col,
-            value
-        )
+    return {
+        "Shahar": 1,
+        "Tuman/Qishloq": 2
+    }.get(
+        value,
+        0
+    )
 
-        cell.font = white_font
-        cell.fill = header_fill
 
-    variables = [
+def encode_marital(value):
 
-        (
-            "gender_code",
-            "Jins",
-            "1=Erkak; 2=Ayol"
-        ),
+    return {
+        "Turmush qurmagan": 1,
+        "Turmush qurgan": 2
+    }.get(
+        value,
+        0
+    )
 
-        (
-            "age_code",
-            "Yosh guruhi",
-            "1=17–19; 2=20–22; 3=23–25; 4=26+"
-        ),
 
-        (
-            "course_code",
-            "Kurs",
-            "1=1-kurs; 2=2-kurs; 3=3-kurs; 4=4-kurs; 5=Magistr/Boshqa"
-        ),
+def encode_children(value):
 
-        (
-            "residence_code",
-            "Yashash joyi",
-            "1=Shahar; 2=Tuman/Qishloq"
-        ),
+    return {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5 va undan ko‘p": 5
+    }.get(
+        value,
+        0
+    )
 
-        (
-            "marital_code",
-            "Oilaviy holat",
-            "0=Turmush qurmagan; 1=Turmush qurgan"
-        ),
 
-        (
-            "ideal_marriage_age",
-            "Maqbul nikoh yoshi",
-            "15–60"
-        ),
+def encode_factor(value):
 
-        (
-            "desired_children",
-            "Istalgan farzandlar",
-            "0–5+"
-        ),
+    factors = {
+        "Shaxsiy xarakter va odob": 1,
+        "Intellekt va ta’lim": 2,
+        "Tashqi ko‘rinish": 3,
+        "Oilaviy qadriyatlar va tarbiya": 4,
+        "Ijtimoiy-iqtisodiy va ro‘zg‘or omillari": 5,
+        "Boshqa": 6
+    }
 
-        (
-            "q1-q16",
-            "Juft tanlash mezonlari",
-            "0=Umuman muhim emas; 1=Unchalik muhim emas; 2=Muhim; 3=Juda muhim"
-        ),
-
-        (
-            "sd_score",
-            "Ijtimoiy maqbullik skori",
-            "0–6"
-        ),
-
-        (
-            "sd_level",
-            "SD darajasi",
-            "Past / O‘rtacha / Yuqori"
-        )
-
-    ]
-
-    row = 2
-
-    for variable, meaning, coding in variables:
-
-        ws.cell(
-            row,
-            1,
-            variable
-        )
-
-        ws.cell(
-            row,
-            2,
-            meaning
-        )
-
-        ws.cell(
-            row,
-            3,
-            coding
-        )
-
-        row += 1
+    return factors.get(
+        value,
+        6
+    )
 
 
 # ============================================================
-# 29. START
+# 18. ISHGA TUSHIRISH
 # ============================================================
 
 if __name__ == "__main__":
